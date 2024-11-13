@@ -88,6 +88,8 @@ class LOLCodeLexer:
             value = match.group(token_type)
             if token_type == "WHITESPACE":
                 continue
+            if token_type == "STRING":
+                value = value[1:-1] # remove surrounding quotations
             tokens.append((token_type, value))  # appends the found value and token type in the tokens list
         return tokens
 
