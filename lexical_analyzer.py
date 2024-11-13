@@ -2,58 +2,58 @@ import re
 
 # LOLCODE keywords and patterns
 KEYWORDS = {
-    "HAI",       # Start of program
-    "KTHXBYE",   # End of program
-    "WAZZUP",
-    "BUHBYE",
-    "I HAS A",   # Variable declaration
-    "ITZ",       # Variable assignment
-    "VISIBLE",   # Output command
-    "GIMMEH",    # Input command
-    "OBTW",
-    "TLDR",
-    "R",
-    "SUM OF",
-    "DIFF OF",
-    "PRODUKT OF",
-    "QUOSHUNT OF",
-    "MOD OF",
-    "BIGGR OF",
-    "SMALLR OF",
-    "BOTH OF",
-    "EITHER OF",
-    "WON OF",
-    "NOT",
-    "ANY OF",
-    "ALL OF",
-    "BOTH SAEM",
-    "DIFFRINT",
-    "SMOOSH",
-    "MAEK",
-    "A",
-    "AN",
-    "IS NOW A",
-    "O RLY?",   # If statement
-    "YA RLY",   # If true
-    "MEBBE",
-    "NO WAI",   # If false
-    "OIC",      # End if
-    "WTF?",
-    "OMG",
-    "OMGWTF",
-    "IM IN YR",
-    "UPPIN",
-    "NERFIN",
-    "YR",
-    "TIL",
-    "WILE",
-    "IM OUTTA YR",
-    "HOW IZ I",
-    "IF U SAY SO",
-    "GTFO",
-    "FOUND YR",
-    "I IZ",
-    "MKAY"
+    "HAI": "Start Variable",       # Start of program
+    "KTHXBYE": "Keyword",   # End of program
+    "WAZZUP": "Keyword",
+    "BUHBYE": "Keyword",
+    "I HAS A": "Keyword",   # Variable declaration
+    "ITZ": "Keyword",       # Variable assignment
+    "VISIBLE": "Keyword",   # Output command
+    "GIMMEH": "Keyword",    # Input command
+    "OBTW": "Keyword",
+    "TLDR": "Keyword",
+    "R": "Keyword",
+    "SUM OF": "Keyword",
+    "DIFF OF": "Keyword",
+    "PRODUKT OF": "Keyword",
+    "QUOSHUNT OF": "Keyword",
+    "MOD OF": "Keyword",
+    "BIGGR OF": "Keyword",
+    "SMALLR OF": "Keyword",
+    "BOTH OF": "Keyword",
+    "EITHER OF": "Keyword",
+    "WON OF": "Keyword",
+    "NOT": "Keyword",
+    "ANY OF": "Keyword",
+    "ALL OF": "Keyword",
+    "BOTH SAEM": "Keyword",
+    "DIFFRINT": "Keyword",
+    "SMOOSH": "Keyword",
+    "MAEK": "Keyword",
+    "A": "Keyword",
+    "AN": "Keyword",
+    "IS NOW A": "Keyword",
+    "O RLY?": "Keyword",   # If statement
+    "YA RLY": "Keyword",   # If true
+    "MEBBE": "Keyword",
+    "NO WAI": "Keyword",   # If false
+    "OIC": "Keyword",      # End if
+    "WTF?": "Keyword",
+    "OMG": "Keyword",
+    "OMGWTF": "Keyword",
+    "IM IN YR": "Keyword",
+    "UPPIN": "Keyword",
+    "NERFIN": "Keyword",
+    "YR": "Keyword",
+    "TIL": "Keyword",
+    "WILE": "Keyword",
+    "IM OUTTA YR": "Keyword",
+    "HOW IZ I": "Keyword",
+    "IF U SAY SO": "Keyword",
+    "GTFO": "Keyword",
+    "FOUND YR": "Keyword",
+    "I IZ": "Keyword",
+    "MKAY": "Keyword"
 }
 
 TOKEN_TYPES = {
@@ -83,7 +83,7 @@ class LOLCodeLexer:
     def tokenize(self, code):
         # Tokenize the given code.
         tokens = []
-        for match in re.finditer(TOKEN_REGEX, code, re.IGNORECASE):
+        for match in re.finditer(TOKEN_REGEX, code, flags=0):
             token_type = match.lastgroup
             value = match.group(token_type)
             if token_type == "WHITESPACE":
@@ -106,6 +106,11 @@ tokens = lexer.analyze_file()
 
 # Display tokens
 for token in tokens:
-    print(token)
-    if token[0] == 'NEWLINE':
+    if token[0] == 'KEYWORD':
+        print(token, end='')
+        print(" " + KEYWORDS[token[1]])
+    elif token[0] == 'NEWLINE':
+        print(token)
         print()
+    else:
+        print(token)
