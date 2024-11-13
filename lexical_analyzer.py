@@ -4,23 +4,65 @@ import re
 KEYWORDS = {
     "HAI",       # Start of program
     "KTHXBYE",   # End of program
+    "WAZZUP",
+    "BUHBYE",
     "I HAS A",   # Variable declaration
     "ITZ",       # Variable assignment
     "VISIBLE",   # Output command
     "GIMMEH",    # Input command
-    "BTW",       # Start of a comment
-    "O RLY?",    # If statement
-    "YA RLY",    # If true
-    "NO WAI",    # If false
-    "OIC"        # End if
+    "OBTW",
+    "TLDR",
+    "R",
+    "SUM OF",
+    "DIFF OF",
+    "PRODUKT OF",
+    "QUOSHUNT OF",
+    "MOD OF",
+    "BIGGR OF",
+    "SMALLR OF",
+    "BOTH OF",
+    "EITHER OF",
+    "WON OF",
+    "NOT",
+    "ANY OF",
+    "ALL OF",
+    "BOTH SAEM",
+    "DIFFRINT",
+    "SMOOSH",
+    "MAEK",
+    "A",
+    "AN",
+    "IS NOW A",
+    "O RLY?",   # If statement
+    "YA RLY",   # If true
+    "MEBBE",
+    "NO WAI",   # If false
+    "OIC",      # End if
+    "WTF?",
+    "OMG",
+    "OMGWTF",
+    "IM IN YR",
+    "UPPIN",
+    "NERFIN",
+    "YR",
+    "TIL",
+    "WILE",
+    "IM OUTTA YR",
+    "HOW IZ I",
+    "IF U SAY SO",
+    "GTFO",
+    "FOUND YR",
+    "I IZ",
+    "MKAY"
 }
 
 TOKEN_TYPES = {
+    'COMMENT': r'BTW.*',
     'KEYWORD': r'\b(?:' + '|'.join(re.escape(keyword) for keyword in KEYWORDS) + r')\b',
-    'NUMBER': r'\b\d+\b',
+    'NUMBAR':r'\b-?\d+\.\d+\b',
+    'NUMBR': r'\b-?\d+\b',
     'STRING': r'"[^"]*"',
     'VARIABLE': r'\b[A-Za-z_]\w*\b',
-    'COMMENT': r'BTW.*',
     'NEWLINE': r'\n+',
     'WHITESPACE': r'[ \t]+'
 }
@@ -52,12 +94,11 @@ class LOLCodeLexer:
     def analyze_file(self):
         # Analyze the LOLCODE file.
         code = self.read_code()
-        print(code)
         tokens = self.tokenize(code)
         return tokens
 
 # Specify the path to the LOLCODE file
-file_path = 'sample.lol'
+file_path = 'project-testcases/01_variables.lol'
 
 # Run the lexer on the specified file
 lexer = LOLCodeLexer(file_path)
@@ -66,3 +107,5 @@ tokens = lexer.analyze_file()
 # Display tokens
 for token in tokens:
     print(token)
+    if token[0] == 'NEWLINE':
+        print()
