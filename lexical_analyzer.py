@@ -2,58 +2,59 @@ import re
 
 # LOLCODE keywords and patterns
 KEYWORDS = {
-    "HAI": "Start Variable",       # Start of program
-    "KTHXBYE": "Keyword",   # End of program
-    "WAZZUP": "Keyword",
-    "BUHBYE": "Keyword",
-    "I HAS A": "Keyword",   # Variable declaration
-    "ITZ": "Keyword",       # Variable assignment
-    "VISIBLE": "Keyword",   # Output command
-    "GIMMEH": "Keyword",    # Input command
-    "OBTW": "Keyword",
-    "TLDR": "Keyword",
-    "R": "Keyword",
-    "SUM OF": "Keyword",
-    "DIFF OF": "Keyword",
-    "PRODUKT OF": "Keyword",
-    "QUOSHUNT OF": "Keyword",
-    "MOD OF": "Keyword",
-    "BIGGR OF": "Keyword",
-    "SMALLR OF": "Keyword",
-    "BOTH OF": "Keyword",
-    "EITHER OF": "Keyword",
-    "WON OF": "Keyword",
-    "NOT": "Keyword",
-    "ANY OF": "Keyword",
-    "ALL OF": "Keyword",
-    "BOTH SAEM": "Keyword",
-    "DIFFRINT": "Keyword",
-    "SMOOSH": "Keyword",
-    "MAEK": "Keyword",
-    "A": "Keyword",
-    "AN": "Keyword",
-    "IS NOW A": "Keyword",
-    "O RLY?": "Keyword",   # If statement
-    "YA RLY": "Keyword",   # If true
-    "MEBBE": "Keyword",
-    "NO WAI": "Keyword",   # If false
-    "OIC": "Keyword",      # End if
-    "WTF?": "Keyword",
-    "OMG": "Keyword",
-    "OMGWTF": "Keyword",
-    "IM IN YR": "Keyword",
-    "UPPIN": "Keyword",
-    "NERFIN": "Keyword",
-    "YR": "Keyword",
-    "TIL": "Keyword",
-    "WILE": "Keyword",
-    "IM OUTTA YR": "Keyword",
-    "HOW IZ I": "Keyword",
-    "IF U SAY SO": "Keyword",
-    "GTFO": "Keyword",
-    "FOUND YR": "Keyword",
-    "I IZ": "Keyword",
-    "MKAY": "Keyword"
+    "HAI": "Code Delimiter",
+    "KTHXBYE": "Code Delimiter",
+    "WAZZUP": "Variable Declaration Clause Delimiter",
+    "BUHBYE": "Variable Declaration Clause Delimiter",
+    "BTW": "Comment",
+    "OBTW": "Comment Delimiter",
+    "TLDR": "Comment Delimiter",
+    "I HAS A": "Variable Declaration",
+    "ITZ": "Variable Iniitalization",
+    "R": "Variable Assignment",
+    "SUM OF": "Addition Operation",
+    "DIFF OF": "Subtraction Operation",
+    "PRODUKT OF": "Multiplication Operation",
+    "QUOSHUNT OF": "Divistion Operation",
+    "MOD OF": "Modulo Operation",
+    "BIGGR OF": "Max Operation",
+    "SMALLR OF": "Min Operation",
+    "BOTH OF": "Boolen AND",
+    "EITHER OF": "Boolean OR",
+    "WON OF": "Boolean XOR",
+    "NOT": "Boolean NOT",
+    "ANY OF": "Boolean OR (Infinite Arity)",
+    "ALL OF": "Boolean AND (Infinite Arity)",
+    "BOTH SAEM": "Comparison Operation ==",
+    "DIFFRINT": "Comparison Operation !=",
+    "SMOOSH": "String Concatenation",
+    "MAEK": "Explicit Typecast",
+    "A": "Partial Keyword",
+    "AN": "Partial Keyword",
+    "IS NOW A": "Explicit Typecast",
+    "VISIBLE": "Output Keyword",
+    "GIMMEH": "Input Keyword",
+    "O RLY?": "If Block Start",
+    "YA RLY": "Condition Met Code Block Delimiter",
+    "^MEBBE": "Else If Code Block Delimiter", # not required to implement
+    "NO WAI": "Condition Not Met Code Block Delimiter",
+    "OIC": "If/Switch Block End",
+    "WTF?": "Switch Block Start",
+    "OMG": "Case Keyword",
+    "OMGWTF": "Default Case Keyword",
+    "IM IN YR": "Loop Delimiter",
+    "UPPIN": "Increment Operation",
+    "NERFIN": "Decrement Operation",
+    "YR": "Partial Keyword",
+    "TIL": "Repeat Loop Until Condition Met",
+    "WILE": "Repeat Loop While Condition Met",
+    "IM OUTTA YR": "Loop Delimiter",
+    "HOW IZ I": "Function Delimiter",
+    "IF U SAY SO": "Function Delimiter",
+    "GTFO": "Break Keyword",
+    "FOUND YR": "Return Keyword",
+    "I IZ": "Function Call Keyword",
+    "MKAY": "Boolean Statement End"
 }
 
 TOKEN_TYPES = {
@@ -69,7 +70,6 @@ TOKEN_TYPES = {
 
 # Combine token types into a single regex pattern
 TOKEN_REGEX = '|'.join(f'(?P<{name}>{pattern})' for name, pattern in TOKEN_TYPES.items())
-print(TOKEN_REGEX)
 
 class LOLCodeLexer:
     def __init__(self, file_path):
@@ -88,7 +88,7 @@ class LOLCodeLexer:
             value = match.group(token_type)
             if token_type == "WHITESPACE":
                 continue
-            tokens.append((token_type, value))
+            tokens.append((token_type, value))  # appends the found value and token type in the tokens list
         return tokens
 
     def analyze_file(self):
