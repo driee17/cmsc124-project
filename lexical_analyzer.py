@@ -1,6 +1,6 @@
 import re
 
-identifier_regex = "\\b[a-zA-Z][a-zA-Z0-9_]*\\b"
+identifier_regex = "\\b[a-zA-Z][a-zA-Z0-9_]*\\b"                        # had to modify the regex, replaced ^ and $ with \\b to get word start and end, not string start and end
 literal_regex = {"\\b-?[0-9]+\\b": "Integer Literal",
                  "\\b-?[0-9]+\.[0-9]+\\b": "Float Literal",
                  "\".*?\"": "String Literal",
