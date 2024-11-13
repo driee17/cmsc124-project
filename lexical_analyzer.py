@@ -107,10 +107,8 @@ tokens = lexer.analyze_file()
 # Display tokens
 for token in tokens:
     if token[0] == 'KEYWORD':
-        print(token, end='')
-        print(" " + KEYWORDS[token[1]])
+        print(token, KEYWORDS[token[1]])
     elif token[0] == 'NEWLINE':
-        print(token)
-        print()
+        print(token, "\n")
     else:
         print(token)
