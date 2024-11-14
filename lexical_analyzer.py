@@ -60,14 +60,15 @@ keyword_regex = {"\\bHAI\\b": "Code Delimiter",
                  "\\bMKAY\\b": "Boolean Statement End"}
 
 def tokenize_file(file_name):               # pass file name as paramenter (must be in same directory)
-    tokens = []                 # all tokens, TODO eventually put the tokens back in order
-    token_classes = []                  # unused yet, TODO also put token classes for each corresponding token index in order
+    lines = []
+    tokens = []
+    token_classes = []
     input_file = open(file_name, "r")
 
     for line in input_file.readlines():             # get all lines, remove leading spaces
-        tokens.append(re.sub("^\s*", "", line))
+        lines.append(re.sub("^\s*", "", line))
     
-    for line in tokens:                         # for each line
+    for line in lines:                         # for each line
         line_lexemes = []
         line_lexeme_classes = []
         currline = line
@@ -78,8 +79,10 @@ def tokenize_file(file_name):               # pass file name as paramenter (must
                 matchfound = re.search(k, currline)                 # match regex to line string
                 if matchfound:                                      # if match found
                     if matchfound.start() == 0:                         # check if that match is at the start of currline (we are interested chopping the line from the start one by one), will help with appending lexemes and their classifications correctly to their corresponding lists
-                        print(v + " found\n")
-                        currline = currline[matchfound.end():]                  # TODO append lexeme to line_lexemes list, append corresponding classification to line_lexeme_classes list
+                        # print(v + " found\n")
+                        line_lexemes.append(currline[:matchfound.end()])            # append lexeme to line_lexemes and append classification to line_lexemes_classes
+                        line_lexeme_classes.append(v)
+                        currline = currline[matchfound.end():]                  # remove that lexeme from the current line
                         flag = True                         # set flag as found, don't bother continuing the loop, otherwise keep looping
                         break
             if flag:
@@ -90,7 +93,9 @@ def tokenize_file(file_name):               # pass file name as paramenter (must
                 matchfound = re.search(k, currline)                 # same logic, only regex differs
                 if matchfound:
                     if matchfound.start() == 0:
-                        print(v + " found\n")
+                        # print(v + " found\n")
+                        line_lexemes.append(currline[:matchfound.end()])
+                        line_lexeme_classes.append(v)
                         currline = currline[matchfound.end():]
                         flag = True
                         break
@@ -100,7 +105,9 @@ def tokenize_file(file_name):               # pass file name as paramenter (must
             matchfound = re.search(identifier_regex, currline)              # lastly, if neither keyword regex nor literal, try identifier
             if matchfound:
                 if matchfound.start() == 0:
-                    print("identifier found\n")
+                    # print("Identifier found\n")
+                    line_lexemes.append(currline[:matchfound.end()])
+                    line_lexeme_classes.append("Identifier")
                     currline = currline[matchfound.end():]
                     continue
 
@@ -113,5 +120,10 @@ def tokenize_file(file_name):               # pass file name as paramenter (must
                 if matchfound.start() == 0:
                     currline = currline[matchfound.end():]
                     continue
-            
-tokenize_file("test.lol")
+
+        tokens.append(line_lexemes)
+        token_classes.append(line_lexeme_classes)
+    
+    return tokens, token_classes
+
+print(tokenize_file("test.lol"))
