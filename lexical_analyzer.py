@@ -1,4 +1,6 @@
 import re
+import tkinter as tk
+from tkinter import filedialog
 
 # LOLCODE keywords and patterns
 KEYWORDS = {
@@ -10,16 +12,16 @@ KEYWORDS = {
     "OBTW": "Comment Delimiter",
     "TLDR": "Comment Delimiter",
     "I HAS A": "Variable Declaration",
-    "ITZ": "Variable Iniitalization",
+    "ITZ": "Variable Initialization",
     "R": "Variable Assignment",
     "SUM OF": "Addition Operation",
     "DIFF OF": "Subtraction Operation",
     "PRODUKT OF": "Multiplication Operation",
-    "QUOSHUNT OF": "Divistion Operation",
+    "QUOSHUNT OF": "Division Operation",
     "MOD OF": "Modulo Operation",
     "BIGGR OF": "Max Operation",
     "SMALLR OF": "Min Operation",
-    "BOTH OF": "Boolen AND",
+    "BOTH OF": "Boolean AND",
     "EITHER OF": "Boolean OR",
     "WON OF": "Boolean XOR",
     "NOT": "Boolean NOT",
@@ -32,7 +34,7 @@ KEYWORDS = {
     "A": "Partial Keyword",
     "AN": "Partial Keyword",
     "IS NOW A": "Explicit Typecast",
-    "VISIBLE": "Output Keyword",
+    "VISIBLE": "Output Keyword", 
     "GIMMEH": "Input Keyword",
     "O RLY?": "If Block Start",
     "YA RLY": "Condition Met Code Block Delimiter",
@@ -62,7 +64,9 @@ TOKEN_TYPES = {
     'KEYWORD': r'\b(?:' + '|'.join(re.escape(keyword) for keyword in KEYWORDS) + r')\b',
     'NUMBAR':r'\b-?\d+\.\d+\b',
     'NUMBR': r'\b-?\d+\b',
-    'STRING': r'"[^"]*"',
+    'CONCATENATE': r'\+', 
+    'TROOF': r'WIN|FAIL',
+    'YARN': r'"[^"]*"',
     'VARIABLE': r'\b[A-Za-z_]\w*\b',
     'NEWLINE': r'\n+',
     'WHITESPACE': r'[ \t]+'
@@ -72,8 +76,18 @@ TOKEN_TYPES = {
 TOKEN_REGEX = '|'.join(f'(?P<{name}>{pattern})' for name, pattern in TOKEN_TYPES.items())
 
 class LOLCodeLexer:
-    def __init__(self, file_path):
-        self.file_path = file_path
+    def __init__(self):
+        self.file_path = self.open_file_dialog()
+
+    def open_file_dialog(self):
+        # Open file dialog to let the user select a LOLCODE file.
+        root = tk.Tk()
+        root.withdraw()  # Hide the root window
+        file_path = filedialog.askopenfilename(
+            title="Select a LOLCODE file",
+            filetypes=[("LOLCODE files", "*.lol"), ("All files", "*.*")]
+        )
+        return file_path
 
     def read_code(self):
         # Read code from the file.
@@ -88,9 +102,13 @@ class LOLCodeLexer:
             value = match.group(token_type)
             if token_type == "WHITESPACE":
                 continue
-            if token_type == "STRING":
-                value = value[1:-1] # remove surrounding quotations
-            tokens.append((token_type, value))  # appends the found value and token type in the tokens list
+            if token_type == "YARN":
+                tokens.append(("STRING_DELIMITER", '"'))
+                value = value[1:-1]
+                tokens.append((token_type, value))
+                tokens.append(("STRING_DELIMITER", '"'))
+                continue
+            tokens.append((token_type, value))  # Appends the found value and token type in the tokens list
         return tokens
 
     def analyze_file(self):
@@ -99,18 +117,39 @@ class LOLCodeLexer:
         tokens = self.tokenize(code)
         return tokens
 
-# Specify the path to the LOLCODE file
-file_path = 'project-testcases/01_variables.lol'
 
-# Run the lexer on the specified file
-lexer = LOLCodeLexer(file_path)
+# Run the lexer and open the file explorer for file selection
+lexer = LOLCodeLexer()
 tokens = lexer.analyze_file()
 
-# Display tokens
+# Print header for the table
+print(f"{'TYPE':<20} {'LEXEMES':<25} {'CLASSIFICATION':<30}")
+print("=" * 90)
+
+# Display tokens in three columns: TYPE, LEXEMES, CLASSIFICATION
 for token in tokens:
-    if token[0] == 'KEYWORD':
-        print(token, KEYWORDS[token[1]])
-    elif token[0] == 'NEWLINE':
-        print(token, "\n")
+    token_type = token[0]
+    lexeme = token[1]
+    
+    if token_type == 'NEWLINE':
+        lexeme = '\\n'
+        classification = 'Newline\n'
     else:
-        print(token)
+        # Classification is either from KEYWORDS or based on the token type
+        if token_type == 'KEYWORD':
+            classification = KEYWORDS.get(lexeme, "Unknown")
+        else:
+            classification = {
+                'COMMENT': 'Comment',
+                'NUMBAR': 'Literal (Float)',
+                'NUMBR': 'Literal (Integer)',
+                'CONCATENATE': 'Concatenate Keyword',
+                'TROOF': "Boolean Literal",
+                'YARN': 'String',
+                'STRING_DELIMITER': 'String Delimiter',
+                'VARIABLE': 'Variable'
+            }.get(token_type, "Unknown")
+    
+    # Print each token in a formatted table row
+
+    print(f"{token_type:<20} {lexeme:<25} {classification:<30}")
