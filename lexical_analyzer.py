@@ -76,6 +76,8 @@ TOKEN_TYPES = {
 TOKEN_REGEX = '|'.join(f'(?P<{name}>{pattern})' for name, pattern in TOKEN_TYPES.items())
 
 class LOLCodeGUI:
+    # color guides:
+    # https://cs111.wellesley.edu/archive/cs111_fall14/public_html/labs/lab12/tkintercolor.html 
     def __init__(self, root):
         self.root = root
         self.root.title("LOLCODE Interpreter")
@@ -122,7 +124,7 @@ class LOLCodeGUI:
         self.tokens_tree.heading("Lexeme", text="LEXEMES")
         self.tokens_tree.heading("Classification", text="CLASSIFICATION")
 
-        self.tokens_tree.column("Type", width=130, anchor="w")
+        self.tokens_tree.column("Type", width=150, anchor="w")
         self.tokens_tree.column("Lexeme", width=250, anchor="w")
         self.tokens_tree.column("Classification", width=250, anchor="w")
 
@@ -186,18 +188,44 @@ class LOLCodeGUI:
     def tokenize(self, code):
         # Tokenize the given code.
         tokens = []
-        for match in re.finditer(TOKEN_REGEX, code, flags=0):
-            token_type = match.lastgroup
-            value = match.group(token_type)
-            if token_type == "WHITESPACE":
+        lines = code.splitlines()
+        is_multiline_comment = False
+        multiline_comment_content = []
+
+        for line in lines:
+            line = line.strip()
+            if is_multiline_comment:
+                if line.startswith("TLDR"):
+                    # End of multi-line comment
+                    # Join the comment lines with a \n and add "OBTW" at the start and "TLDR" at the end
+                    full_comment = "OBTW \\n " + " \\n ".join(multiline_comment_content) + " \\n TLDR"
+                    tokens.append(("MULTI-LINE_COMMENT", full_comment))
+                    is_multiline_comment = False
+                    multiline_comment_content = []
+                else:
+                    # Append the content of the line to the multi-line comment (without leading whitespace)
+                    multiline_comment_content.append(line)
                 continue
-            if token_type == "YARN":
-                tokens.append(("STRING_DELIMITER", '"'))
-                value = value[1:-1]
-                tokens.append((token_type, value))
-                tokens.append(("STRING_DELIMITER", '"'))
+
+            if line.startswith("OBTW"):
+                # Start of multi-line comment
+                is_multiline_comment = True
                 continue
-            tokens.append((token_type, value))  # Appends the found value and token type in the tokens list
+
+            # Tokenize normally for non-comment lines
+            for match in re.finditer(TOKEN_REGEX, line, flags=0):
+                token_type = match.lastgroup
+                value = match.group(token_type)
+                if token_type == "WHITESPACE":
+                    continue
+                if token_type == "YARN":
+                    tokens.append(("STRING_DELIMITER", '"'))
+                    value = value[1:-1]
+                    tokens.append((token_type, value))
+                    tokens.append(("STRING_DELIMITER", '"'))
+                    continue
+                tokens.append((token_type, value))  # Appends the found value and token type in the tokens list
+
         return tokens
 
     def execute_code(self):
@@ -228,6 +256,7 @@ class LOLCodeGUI:
                 else:
                     classification = {
                         'COMMENT': 'Comment',
+                        'MULTI-LINE_COMMENT': 'Multi-line Comment',
                         'NUMBAR': 'Literal (Float)',
                         'NUMBR': 'Literal (Integer)',
                         'CONCATENATE': 'Concatenate Keyword',
@@ -239,6 +268,17 @@ class LOLCodeGUI:
 
             # Display token in the Treeview
             self.tokens_tree.insert("", "end", values=(token_type, lexeme, classification))
+
+            '''
+            # Add variables to the symbol table
+            if token_type == "VARIABLE":
+                if lexeme not in symbol_table:
+                    symbol_table[lexeme] = " "
+
+        # Update the symbol table in the UI
+        for identifier, value in symbol_table.items():
+            self.symbol_table.insert("", "end", values=(identifier, value))
+        '''
 
 # Create the main application window
 root = tk.Tk()
