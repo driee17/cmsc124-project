@@ -126,3 +126,8 @@ tokens_initial = tokens.copy()          # to store original tokens
 tokens.reverse()                        # turn tokens into a stack
 parsed_output = program_parse()
 print(parsed_output)
+
+# ======= SOME REFERENCES
+# https://www.booleanworld.com/building-recursive-descent-parsers-definitive-guide/
+# https://cratecode.com/info/python-recursive-descent-parser
+# https://stackoverflow.com/questions/19749883/how-to-parse-parenthetical-trees-in-python
