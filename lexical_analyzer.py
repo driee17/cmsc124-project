@@ -56,7 +56,7 @@ KEYWORDS = {
     "GTFO": "Break Keyword",
     "FOUND YR": "Return Keyword",
     "I IZ": "Function Call Keyword",
-    "MKAY": "Boolean Statement End"
+    "MKAY": "Boolean Statement End",
 }
 
 TOKEN_TYPES = {
@@ -67,6 +67,7 @@ TOKEN_TYPES = {
     'CONCATENATE': r'\+', 
     'TROOF': r'WIN|FAIL',
     'YARN': r'"[^"]*"',
+    'TYPE': r'(NUMBAR|NUMBR|TROOF|YARN|NOOB)',
     'VARIABLE': r'\b[A-Za-z_]\w*\b',
     'NEWLINE': r'\n+',
     'WHITESPACE': r'[ \t]+'
@@ -263,7 +264,8 @@ class LOLCodeGUI:
                         'TROOF': "Boolean Literal",
                         'YARN': 'String',
                         'STRING_DELIMITER': 'String Delimiter',
-                        'VARIABLE': 'Variable'
+                        'VARIABLE': 'Variable',
+                        'TYPE': 'Variable Type'
                     }.get(token_type, "Unknown")
 
             # Display token in the Treeview
