@@ -1,5 +1,9 @@
 HAI
-    I HAS A var1 ITZ 1
-    var1 R 2
-    MAEK var1 YARN
+    I HAS A var1
+    VISIBLE var1
+    I HAS A var2 ITZ var1
+    VISIBLE 1
+    VISIBLE "nya"
+    I HAS A var3 ITZ "LOL"
+    VISIBLE "hello"
 KTHXBYE

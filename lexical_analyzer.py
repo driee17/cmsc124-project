@@ -1,129 +1,155 @@
 import re
+import tkinter as tk
+from tkinter import filedialog
 
-identifier_regex = "\\b[a-zA-Z][a-zA-Z0-9_]*\\b"                        # had to modify the regex, replaced ^ and $ with \\b to get word start and end, not string start and end
-literal_regex = {"\\b-?[0-9]+\\b": "Integer Literal",
-                 "\\b-?[0-9]+\.[0-9]+\\b": "Float Literal",
-                 "\".*?\"": "String Literal",
-                 "\\b(WIN|FAIL)\\b": "Boolean Literal",
-                 "\\b(NOOB|NUMBR|NUMBAR|YARN|TROOF)\\b": "Type Literal"}
-keyword_regex = {"\\bHAI\\b": "Code Delimiter",
-                 "\\bKTHXBYE\\b": "Code Delimiter",
-                 "\\bWAZZUP\\b": "Variable Declaration Clause Delimiter",
-                 "\\bBUHBYE\\b": "Variable Declaration Clause Delimiter",
-                 "\\bBTW\\b": "Comment",
-                 "\\bOBTW\\b": "Comment Delimiter",
-                 "\\bTLDR\\b": "Comment Delimiter",
-                 "I HAS A": "Variable Declaration",
-                 "\\bITZ\\b": "Variable Iniitalization",
-                 "\\bR\\b": "Variable Assignment",
-                 "\\bSUM OF\\b": "Addition Operation",
-                 "\\bDIFF OF\\b": "Subtraction Operation",
-                 "\\bPRODUKT OF\\b": "Multiplication Operation",
-                 "\\bQUOSHUNT OF\\b": "Divistion Operation",
-                 "\\bMOD OF\\b": "Modulo Operation",
-                 "\\bBIGGR OF\\b": "Max Operation",
-                 "\\bSMALLR OF\\b": "Min Operation",
-                 "\\bBOTH OF\\b": "Boolen AND",
-                 "\\bEITHER OF\\b": "Boolean OR",
-                 "\\bWON OF\\b": "Boolean XOR",
-                 "\\bNOT\\b": "Boolean NOT",
-                 "\\bANY OF\\b": "Boolean OR (Infinite Arity)",
-                 "\\bALL OF\\b": "Boolean AND (Infinite Arity)",
-                 "\\bBOTH SAEM\\b": "Comparison Operation ==",
-                 "\\bDIFFRINT\\b": "Comparison Operation !=",
-                 "\\bSMOOSH\\b": "String Concatenation",
-                 "\\bMAEK\\b": "Explicit Typecast",
-                 "\\bA\\b": "Partial Keyword",
-                 "\\bIS NOW A\\b": "Explicit Typecast",
-                 "\\bVISIBLE\\b": "Output Keyword",
-                 "\\bGIMMEH\\b": "Input Keyword",
-                 "\\bO RLY\?\\b": "If Block Start",
-                 "\\bYA RLY\\b": "Condition Met Code Block Delimiter",
-                #  "^MEBBE\\b": "Else If Code Block Delimiter",                 # not required to implement
-                 "\\bNO WAI\\b": "Condition Not Met Code Block Delimiter",
-                 "\\bOIC\\b": "If/Switch Block End",
-                 "\\bWTF\?\\b": "Switch Block Start",
-                 "\\bOMG\\b": "Case Keyword",
-                 "\\bOMGWTF\\b": "Default Case Keyword",
-                 "\\bIM IN YR\\b": "Loop Delimiter",
-                 "\\bUPPIN\\b": "Increment Operation",
-                 "\\bNERFIN\\b": "Decrement Operation",
-                 "\\bYR\\b": "Partial Keyword",
-                 "\\bTIL\\b": "Repeat Loop Until Condition Met",
-                 "\\bWILE\\b": "Repeat Loop While Condition Met",
-                 "\\bIM OUTTA YR\\b": "Loop Delimiter",
-                 "\\bHOW IZ I\\b": "Function Delimiter",
-                 "\\bIF U SAY SO\\b": "Function Delimiter",
-                 "\\bGTFO\\b": "Break Keyword",
-                 "\\bFOUND YR\\b": "Return Keyword",
-                 "\\bI IZ\\b": "Function Call Keyword",
-                 "\\bMKAY\\b": "Boolean Statement End"}
+# LOLCODE keywords and patterns
+KEYWORDS = {
+    "HAI": "Code Delimiter",
+    "KTHXBYE": "Code Delimiter",
+    "WAZZUP": "Variable Declaration Clause Delimiter",
+    "BUHBYE": "Variable Declaration Clause Delimiter",
+    "BTW": "Comment",
+    "OBTW": "Comment Delimiter",
+    "TLDR": "Comment Delimiter",
+    "I HAS A": "Variable Declaration",
+    "ITZ": "Variable Initialization",
+    "R": "Variable Assignment",
+    "SUM OF": "Addition Operation",
+    "DIFF OF": "Subtraction Operation",
+    "PRODUKT OF": "Multiplication Operation",
+    "QUOSHUNT OF": "Division Operation",
+    "MOD OF": "Modulo Operation",
+    "BIGGR OF": "Max Operation",
+    "SMALLR OF": "Min Operation",
+    "BOTH OF": "Boolean AND",
+    "EITHER OF": "Boolean OR",
+    "WON OF": "Boolean XOR",
+    "NOT": "Boolean NOT",
+    "ANY OF": "Boolean OR (Infinite Arity)",
+    "ALL OF": "Boolean AND (Infinite Arity)",
+    "BOTH SAEM": "Comparison Operation ==",
+    "DIFFRINT": "Comparison Operation !=",
+    "SMOOSH": "String Concatenation",
+    "MAEK": "Explicit Typecast",
+    "A": "Partial Keyword",
+    "AN": "Partial Keyword",
+    "IS NOW A": "Explicit Typecast",
+    "VISIBLE": "Output Keyword", 
+    "GIMMEH": "Input Keyword",
+    "O RLY?": "If Block Start",
+    "YA RLY": "Condition Met Code Block Delimiter",
+    "^MEBBE": "Else If Code Block Delimiter", # not required to implement
+    "NO WAI": "Condition Not Met Code Block Delimiter",
+    "OIC": "If/Switch Block End",
+    "WTF?": "Switch Block Start",
+    "OMG": "Case Keyword",
+    "OMGWTF": "Default Case Keyword",
+    "IM IN YR": "Loop Delimiter",
+    "UPPIN": "Increment Operation",
+    "NERFIN": "Decrement Operation",
+    "YR": "Partial Keyword",
+    "TIL": "Repeat Loop Until Condition Met",
+    "WILE": "Repeat Loop While Condition Met",
+    "IM OUTTA YR": "Loop Delimiter",
+    "HOW IZ I": "Function Delimiter",
+    "IF U SAY SO": "Function Delimiter",
+    "GTFO": "Break Keyword",
+    "FOUND YR": "Return Keyword",
+    "I IZ": "Function Call Keyword",
+    "MKAY": "Boolean Statement End"
+}
 
-def tokenize_file(file_name):               # pass file name as paramenter (must be in same directory)
-    lines = []
-    tokens = []
-    token_classes = []
-    input_file = open(file_name, "r")
+TOKEN_TYPES = {
+    'COMMENT': r'BTW.*',
+    'KEYWORD': r'\b(?:' + '|'.join(re.escape(keyword) for keyword in KEYWORDS) + r')\b',
+    'NUMBAR':r'\b-?\d+\.\d+\b',
+    'NUMBR': r'\b-?\d+\b',
+    'CONCATENATE': r'\+', 
+    'TROOF': r'WIN|FAIL',
+    'YARN': r'"[^"]*"',
+    'VARIABLE': r'\b[A-Za-z_]\w*\b',
+    'NEWLINE': r'\n+',
+    'WHITESPACE': r'[ \t]+'
+}
 
-    for line in input_file.readlines():             # get all lines, remove leading spaces
-        lines.append(re.sub("^\s*", "", line))
+# Combine token types into a single regex pattern
+TOKEN_REGEX = '|'.join(f'(?P<{name}>{pattern})' for name, pattern in TOKEN_TYPES.items())
+
+class LOLCodeLexer:
+    def __init__(self):
+        self.file_path = self.open_file_dialog()
+
+    def open_file_dialog(self):
+        # Open file dialog to let the user select a LOLCODE file.
+        root = tk.Tk()
+        root.withdraw()  # Hide the root window
+        file_path = filedialog.askopenfilename(
+            title="Select a LOLCODE file",
+            filetypes=[("LOLCODE files", "*.lol"), ("All files", "*.*")]
+        )
+        return file_path
+
+    def read_code(self):
+        # Read code from the file.
+        with open(self.file_path, 'r') as file:
+            return file.read()
+
+    def tokenize(self, code):
+        # Tokenize the given code.
+        tokens = []
+        for match in re.finditer(TOKEN_REGEX, code, flags=0):
+            token_type = match.lastgroup
+            value = match.group(token_type)
+            if token_type == "WHITESPACE":
+                continue
+            if token_type == "YARN":
+                tokens.append(("STRING_DELIMITER", '"'))
+                value = value[1:-1]
+                tokens.append((token_type, value))
+                tokens.append(("STRING_DELIMITER", '"'))
+                continue
+            tokens.append((token_type, value))  # Appends the found value and token type in the tokens list
+        return tokens
+
+    def analyze_file(self):
+        # Analyze the LOLCODE file.
+        code = self.read_code()
+        tokens = self.tokenize(code)
+        return tokens
+
+
+# # Run the lexer and open the file explorer for file selection
+# lexer = LOLCodeLexer()
+# tokens = lexer.analyze_file()
+
+# # Print header for the table
+# print(f"{'TYPE':<20} {'LEXEMES':<25} {'CLASSIFICATION':<30}")
+# print("=" * 90)
+
+# # Display tokens in three columns: TYPE, LEXEMES, CLASSIFICATION
+# for token in tokens:
+#     token_type = token[0]
+#     lexeme = token[1]
     
-    for line in lines:                         # for each line
-        line_lexemes = []
-        line_lexeme_classes = []
-        currline = line
-
-        while currline != "":                       # copy line to currline, cut currline up into chunks of lexemes
-            flag = False                            # flag for loop exiting
-            for k, v in keyword_regex.items():              # iterate through all keyword regexes in dictionary
-                matchfound = re.search(k, currline)                 # match regex to line string
-                if matchfound:                                      # if match found
-                    if matchfound.start() == 0:                         # check if that match is at the start of currline (we are interested chopping the line from the start one by one), will help with appending lexemes and their classifications correctly to their corresponding lists
-                        # print(v + " found\n")
-                        line_lexemes.append(currline[:matchfound.end()])            # append lexeme to line_lexemes and append classification to line_lexemes_classes
-                        line_lexeme_classes.append(v)
-                        currline = currline[matchfound.end():]                  # remove that lexeme from the current line
-                        flag = True                         # set flag as found, don't bother continuing the loop, otherwise keep looping
-                        break
-            if flag:
-                continue
-
-            flag = False
-            for k, v in literal_regex.items():                      # if no keyword regex match, try literals
-                matchfound = re.search(k, currline)                 # same logic, only regex differs
-                if matchfound:
-                    if matchfound.start() == 0:
-                        # print(v + " found\n")
-                        line_lexemes.append(currline[:matchfound.end()])
-                        line_lexeme_classes.append(v)
-                        currline = currline[matchfound.end():]
-                        flag = True
-                        break
-            if flag:
-                continue
-
-            matchfound = re.search(identifier_regex, currline)              # lastly, if neither keyword regex nor literal, try identifier
-            if matchfound:
-                if matchfound.start() == 0:
-                    # print("Identifier found\n")
-                    line_lexemes.append(currline[:matchfound.end()])
-                    line_lexeme_classes.append("Identifier")
-                    currline = currline[matchfound.end():]
-                    continue
-
-            if currline == "\n":
-                currline = ""
-                continue
-
-            matchfound = re.search("\s", currline)
-            if matchfound:
-                if matchfound.start() == 0:
-                    currline = currline[matchfound.end():]
-                    continue
-
-        tokens.append(line_lexemes)
-        token_classes.append(line_lexeme_classes)
+#     if token_type == 'NEWLINE':
+#         lexeme = '\\n'
+#         classification = 'Newline\n'
+#     else:
+#         # Classification is either from KEYWORDS or based on the token type
+#         if token_type == 'KEYWORD':
+#             classification = KEYWORDS.get(lexeme, "Unknown")
+#         else:
+#             classification = {
+#                 'COMMENT': 'Comment',
+#                 'NUMBAR': 'Literal (Float)',
+#                 'NUMBR': 'Literal (Integer)',
+#                 'CONCATENATE': 'Concatenate Keyword',
+#                 'TROOF': "Boolean Literal",
+#                 'YARN': 'String',
+#                 'STRING_DELIMITER': 'String Delimiter',
+#                 'VARIABLE': 'Variable'
+#             }.get(token_type, "Unknown")
     
-    return tokens, token_classes
+#     # Print each token in a formatted table row
 
-print(tokenize_file("test.lol"))
+#     print(f"{token_type:<20} {lexeme:<25} {classification:<30}")
