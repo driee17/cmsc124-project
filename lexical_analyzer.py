@@ -69,7 +69,7 @@ TOKEN_TYPES = {
     'YARN': r'"[^"]*"',
     'TYPE': r'(NUMBAR|NUMBR|TROOF|YARN|NOOB)',
     'VARIABLE': r'\b[A-Za-z_]\w*\b',
-    'NEWLINE': r'\n+',
+    'NEWLINE': r'\n',
     'WHITESPACE': r'[ \t]+'
 }
 
