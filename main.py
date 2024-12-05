@@ -1,5 +1,6 @@
 import lexical_analyzer
 import syntax_analyzer
+import semantic_analyzer
 import tkinter as tk
 from tkinter import filedialog, scrolledtext, ttk
 import re
@@ -160,6 +161,20 @@ class LOLCodeGUI:
             self.console.config(text=f"Syntax Analysis Successful: {syntax_result}")
         except Exception as e:
             self.console.config(text=f"Syntax Analysis Error: {e}")
+            return
+
+        # Perform semantic analysis using SemanticAnalyzer
+        semantics = semantic_analyzer.SemanticAnalyzer()
+        if semantics.analyze(syntax_result):
+            print("Semantic Analysis Successful")
+
+            # Populate the symbol table TreeView
+            for identifier, value in semantics.symbol_table.items():
+                self.symbol_table.insert("", "end", values=(identifier, value))
+        else:
+            errors = "\n".join(semantics.report_errors())
+            print("Semantic Analysis Errors:\n{errors}")
+
 
 
 if __name__ == "__main__":
