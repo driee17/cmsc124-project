@@ -306,7 +306,7 @@ class SemanticAnalyzer:
                 operator = expression[0]
 
                 # Check if the operator is a string and belongs to supported operators
-                if isinstance(operator, str) and operator in {"SUM OF", "DIFF OF", "PRODUKT OF", "QUOSHUNT OF", "MOD OF", "BIGGR OF", "SMALLR OF"}:
+                if isinstance(operator, str) and operator in {"SUM OF", "DIFF OF", "PRODUKT OF", "QUOSHUNT OF", "MOD OF", "BIGGR OF", "SMALLR OF", "BOTH SAEM", "DIFFRINT"}:
                     if len(expression) < 4 or expression[2] != "AN":
                         self.errors.append(f"Invalid binary operation: {expression}")
                         return None
@@ -322,7 +322,7 @@ class SemanticAnalyzer:
 
                 # Handle BIGGR OF and SMALLR OF operators
                 if isinstance(operator, str) and operator in {"BIGGR OF", "SMALLR OF"}:
-                    if len(expression) < 3:
+                    if len(expression) < 4 or expression[2] != "AN":
                         self.errors.append(f"Invalid operation: {expression}")
                         return None
                     left = self.evaluate_expression(expression[1])
@@ -332,6 +332,18 @@ class SemanticAnalyzer:
                     right = 1 if right == "WIN" else (0 if right == "FAIL" else right)
                     return max(left, right) if operator == "BIGGR OF" else min(left, right)
 
+                # Handle BOTH SAEM and DIFFRINT operators
+                if isinstance(operator, str) and operator in {"BOTH SAEM", "DIFFRINT"}:
+                    if len(expression) < 4 or expression[2] != "AN":
+                        self.errors.append(f"Invalid comparison operation: {expression}")
+                        return None
+                    left = self.evaluate_expression(expression[1])
+                    right = self.evaluate_expression(expression[3])
+                    if left is None or right is None:
+                        self.errors.append(f"Cannot evaluate operands for comparison: {expression}")
+                        return None
+                    # Evaluate the comparison
+                    return left == right if operator == "BOTH SAEM" else left != right
             # Unrecognized operator
             else:
                 self.errors.append(f"Unrecognized operator: {operator}")
