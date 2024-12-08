@@ -51,6 +51,8 @@ class SemanticAnalyzer:
                 self.handle_type_cast(statement)
             elif keyword == "SMOOSH":
                 self.handle_smoosh(statement[1:])
+            elif keyword == "O RLY?":
+                self.handle_orly(statement)
             else:
                 self.errors.append(f"Unrecognized statement: {statement}")
         else:
@@ -217,7 +219,7 @@ class SemanticAnalyzer:
             pass
 
         # Check for string literals
-        if token.startswith('"') and token.endswith('"'):
+        if isinstance(token, str) and token.startswith('"') and token.endswith('"'):
             value = token.strip('"')  
             if value.isdigit():
                 return int(value)
@@ -269,6 +271,52 @@ class SemanticAnalyzer:
             result += str(evaluated)  # Convert to YARN if necessary
         return result
     
+    def handle_orly(self, statement):
+        """Process O RLY? conditional statements."""
+        print(f"Processing O RLY?: {statement}")
+        if len(statement) < 3:
+            self.errors.append(f"Invalid O RLY? structure: {statement}")
+            return
+
+        # Extract condition and branches
+        condition = statement[1]  # First expression
+        branches = statement[2:]
+
+        # Evaluate the condition
+        condition_result = self.evaluate_expression(condition)
+
+        # Find YA RLY, NO WAI, and optional MEBBE branches
+        ya_rly_block = []
+        no_wai_block = []
+        mebbe_blocks = []  # Each MEBBE block is (condition, statements)
+
+        for i in range(len(branches)):
+            if branches[i] == "YA RLY":
+                ya_rly_block = branches[i + 1]
+            elif branches[i] == "NO WAI":
+                no_wai_block = branches[i + 1]
+            elif branches[i] == "MEBBE":
+                mebbe_blocks.append((branches[i + 1], branches[i + 2]))
+
+        # Execute the appropriate block
+        if condition_result == "WIN":
+            self.execute_block(ya_rly_block)
+        else:
+            executed = False
+            for mebbe_condition, mebbe_block in mebbe_blocks:
+                if self.evaluate_expression(mebbe_condition) == "WIN":
+                    self.execute_block(mebbe_block)
+                    executed = True
+                    break
+            if not executed:  # No MEBBE conditions matched
+                self.execute_block(no_wai_block)
+
+    def execute_block(self, block):
+        """Execute a block of statements."""
+        if isinstance(block, list):
+            for statement in block:
+                self.process_statement(statement)
+
     def evaluate_expression(self, expression):
         """Evaluate expressions recursively."""
         print(f"Evaluating expression: {expression}")
@@ -328,8 +376,8 @@ class SemanticAnalyzer:
                     left = self.evaluate_expression(expression[1])
                     right = self.evaluate_expression(expression[2])
                     print(f"{operator}: Left = {left}, Right = {right}")  # Debugging
-                    left = 1 if left == "WIN" else (0 if left == "FAIL" else left)
-                    right = 1 if right == "WIN" else (0 if right == "FAIL" else right)
+                    # left = 1 if left == "WIN" else (0 if left == "FAIL" else left)
+                    # right = 1 if right == "WIN" else (0 if right == "FAIL" else right)
                     return max(left, right) if operator == "BIGGR OF" else min(left, right)
 
                 # Handle BOTH SAEM and DIFFRINT operators
