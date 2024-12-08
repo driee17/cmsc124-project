@@ -1,6 +1,3 @@
-import lexical_analyzer
-# lexical_analyzer.KEYWORDS
-
 class SemanticAnalyzer:
     def __init__(self):
         self.symbol_table = {"IT": []}  # Ensure IT starts as an empty list
