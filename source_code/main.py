@@ -32,7 +32,7 @@ class LOLCodeGUI:
         self.browse_button = tk.Button(self.file_explorer_frame, text="📂", bg="steel blue", fg="ivory2", font=("Helvetica", 12, "bold"), command=self.open_file)
         self.browse_button.pack(fill="x", padx=5, pady=5)
 
-        self.text_editor = scrolledtext.ScrolledText(self.file_explorer_frame, wrap="word", bg="ivory2", height=25, width=80)
+        self.text_editor = scrolledtext.ScrolledText(self.file_explorer_frame, wrap="word", bg="ivory2", font=("Helvetica", 8), height=25, width=60)
         self.text_editor.pack(fill="both", expand=True, padx=5, pady=5)
 
         # COLUMN 2: List of Tokens
@@ -52,9 +52,9 @@ class LOLCodeGUI:
         self.tokens_tree.heading("Lexeme", text="LEXEMES")
         self.tokens_tree.heading("Classification", text="CLASSIFICATION")
 
-        self.tokens_tree.column("Type", width=150, anchor="w")
-        self.tokens_tree.column("Lexeme", width=250, anchor="w")
-        self.tokens_tree.column("Classification", width=250, anchor="w")
+        self.tokens_tree.column("Type", width=120, anchor="w")
+        self.tokens_tree.column("Lexeme", width=140, anchor="w")
+        self.tokens_tree.column("Classification", width=160, anchor="w")
 
         self.tokens_tree.pack(side="left", fill="both", expand=True)
 
@@ -81,8 +81,8 @@ class LOLCodeGUI:
         self.symbol_table.heading("Identifier", text="IDENTIFIER")
         self.symbol_table.heading("Value", text="VALUE")
 
-        self.symbol_table.column("Identifier", width=200, anchor="w")
-        self.symbol_table.column("Value", width=200, anchor="w")
+        self.symbol_table.column("Identifier", width=100, anchor="w")
+        self.symbol_table.column("Value", width=600, anchor="w")
 
         self.symbol_table.pack(side="left", fill="both", expand=True)
 
