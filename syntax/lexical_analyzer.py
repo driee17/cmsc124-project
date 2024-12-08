@@ -82,14 +82,20 @@ TOKEN_REGEX = '|'.join(f'(?P<{name}>{pattern})' for name, pattern in TOKEN_TYPES
 
 class LOLCodeLexer:
     def __init__(self):
-        self.file_path = None  # Initialize without a file path
+        self.file_path = self.open_file_dialog()
 
-    def set_file_path(self, file_path):
-        self.file_path = file_path
+    def open_file_dialog(self):
+        # Open file dialog to let the user select a LOLCODE file.
+        root = tk.Tk()
+        root.withdraw()  # Hide the root window
+        file_path = filedialog.askopenfilename(
+            title="Select a LOLCODE file",
+            filetypes=[("LOLCODE files", "*.lol"), ("All files", "*.*")]
+        )
+        return file_path
 
     def read_code(self):
-        if not self.file_path:
-            raise Exception("File path not set")
+        # Read code from the file.
         with open(self.file_path, 'r') as file:
             return file.read()
 
