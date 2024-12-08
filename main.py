@@ -98,8 +98,11 @@ class LOLCodeGUI:
         self.execute_button.grid(row=2, column=0, columnspan=3, sticky="nsew", padx=5, pady=5)
 
         # CONSOLE
-        self.console = tk.Label(root, bg="ivory2", anchor="nw", relief="solid", height=15)
+        self.console = scrolledtext.ScrolledText(
+            root, wrap="word", bg="ivory2", font=("Helvetica", 10), height=15
+        )
         self.console.grid(row=3, column=0, columnspan=3, sticky="nsew", padx=5, pady=5)
+
 
 
     def open_file(self):
@@ -135,10 +138,13 @@ class LOLCodeGUI:
         for token in tokens:
             token_type = token[0]
             lexeme = token[1]
+            if token_type == 'NEWLINE':
+                lexeme = '\\n'
 
             classification = (
                 lexical_analyzer.KEYWORDS.get(lexeme, "Unknown") if token_type == "KEYWORD"
                 else {
+                    "NEWLINE": "Newline",
                     "COMMENT": "Comment",
                     "MULTI-LINE_COMMENT": "Multi-line Comment",
                     "NUMBAR": "Literal (Float)",
@@ -158,7 +164,8 @@ class LOLCodeGUI:
         syntax_analyzer.tokens = tokens[::-1]  # Reverse tokens for stack-based parsing
         try:
             syntax_result = syntax_analyzer.program_parse()
-            self.console.config(text=f"Syntax Analysis Successful: {syntax_result}")
+            self.console.delete(1.0, tk.END)  # Clear existing content
+            self.console.insert(tk.END, f"Syntax Analysis Successful: {syntax_result}\n")
         except Exception as e:
             self.console.config(text=f"Syntax Analysis Error: {e}")
             return
@@ -171,11 +178,17 @@ class LOLCodeGUI:
             # Populate the symbol table TreeView
             for identifier, value in semantics.symbol_table.items():
                 self.symbol_table.insert("", "end", values=(identifier, value))
+
+            # Collect and display all outputs from VISIBLE statements
+            visible_outputs = semantics.get_visible_outputs() 
+            wrapped_output = "\n".join(visible_outputs)
+            self.console.delete(1.0, tk.END)
+            self.console.insert(tk.END, wrapped_output)
+
         else:
             errors = "\n".join(semantics.report_errors())
-            print("Semantic Analysis Errors:\n{errors}")
-
-
+            self.console.delete(1.0, tk.END)
+            self.console.insert(tk.END, f"Semantic Analysis Errors:\n{errors}\n")
 
 if __name__ == "__main__":
     root = tk.Tk()

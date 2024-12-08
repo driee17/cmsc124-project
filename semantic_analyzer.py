@@ -2,100 +2,212 @@ class SemanticAnalyzer:
     def __init__(self):
         self.symbol_table = {}  # Track variables/functions and their details
         self.errors = []        # Accumulate semantic errors
-        self.in_variable_block = False  # Track whether we are inside a WAZZUP block
+        self.visible_outputs = []  # Holds outputs of VISIBLE statements
+        self.in_variable_block = False  # Track if inside a WAZZUP block
+        self.it = None          # Implicit IT variable
 
     def analyze(self, syntax_output):
+        print(f"Symbol Table: {self.symbol_table}") 
         """Analyze the structured output from the syntax analyzer."""
-        if isinstance(syntax_output, list):  # Assume list structure
-            for statement in syntax_output:
-                self.process_statement(statement)
-        else:
-            self.errors.append("Invalid syntax analyzer output.")
+        if not isinstance(syntax_output, list):
+            self.errors.append("Invalid syntax output structure.")
+            return False
+
+        for statement in syntax_output:
+            self.process_statement(statement)
+        
+        print(f"Final Symbol Table: {self.symbol_table}")
         return len(self.errors) == 0
 
+
     def process_statement(self, statement):
-        """Process individual statements based on their type."""
+        print(f"Processing statement: {statement}")
+        """Process a single statement."""
+        if isinstance(statement, str):  # Handle standalone keywords
+            if statement == "HAI":
+                return  # Ignore program start
+            elif statement == "KTHXBYE":
+                return  # Ignore program end
+            else:
+                self.errors.append(f"Invalid statement format: {statement}")
+                return
+
         if isinstance(statement, list) and statement:
             keyword = statement[0]
-
-            if keyword == "WAZZUP":  # Start of variable block
-                self.handle_wazzup(statement)
-            elif keyword == "BUHBYE":  # End of variable block
-                self.handle_buhbye(statement)
-            elif self.in_variable_block and keyword == "I HAS A":  # Variable declaration
-                self.handle_variable_declaration(statement)
-            elif keyword == "VISIBLE":  # Output statement
-                self.handle_output(statement)
-            elif len(statement) > 1 and statement[1] == "R":  # Assignment
-                self.handle_assignment(statement)
-            elif keyword == "HOW IZ I":  # Function declaration
-                self.handle_function_declaration(statement)
-            elif keyword in {"O RLY?", "IM IN YR", "WTF?"}:  # Control structures
-                self.handle_control_structure(statement)
+            if keyword == "WAZZUP":
+                self.in_variable_block = True
+                for var_decl in statement[1:]:
+                    if var_decl == "BUHBYE":
+                        self.in_variable_block = False
+                        break
+                    self.handle_variable_declaration(var_decl)
+            elif keyword == "VISIBLE":
+                self.handle_visible(statement[1])
             else:
                 self.errors.append(f"Unrecognized statement: {statement}")
-
-    def handle_wazzup(self, statement):
-        """Start of variable declaration block."""
-        if self.in_variable_block:
-            self.errors.append("Nested WAZZUP blocks are not allowed.")
         else:
-            self.in_variable_block = True
+            self.errors.append(f"Invalid statement format: {statement}")
 
-    def handle_buhbye(self, statement):
-        """End of variable declaration block."""
-        if not self.in_variable_block:
-            self.errors.append("BUHBYE encountered outside of a WAZZUP block.")
+    def handle_variable_declaration(self, declaration):
+        """Process variable declarations in the WAZZUP block."""
+        if len(declaration) < 2 or declaration[0] != "I HAS A":
+            self.errors.append(f"Invalid variable declaration: {declaration}")
+            return
+
+        var_name = declaration[1]
+        if var_name in self.symbol_table:
+            self.errors.append(f"Variable '{var_name}' already declared.")
+            return
+
+        # Handle initialization
+        if len(declaration) > 2 and declaration[2] == "ITZ":
+            value = self.evaluate_expression(declaration[3])
         else:
-            self.in_variable_block = False
+            value = "NOOB"  # Default uninitialized value
 
-    def handle_variable_declaration(self, statement):
-        """Check variable declarations."""
-        try:
-            var_name = statement[1]
-            if var_name in self.symbol_table:
-                self.errors.append(f"Variable '{var_name}' is already declared.")
+        self.symbol_table[var_name] = value
+        print(f"Declared variable: {var_name} = {value}")
+
+    def handle_visible(self, expressions):
+        """Process VISIBLE statements."""
+        result = self.evaluate_expression(expressions)
+        if result is not None:
+            output = f"{result}"
+            print(output)  # Print to console for debugging
+            self.visible_outputs.append(output)  # Store for GUI
+            self.it = result  # Update IT variable
+        else:
+            self.errors.append(f"Failed to evaluate VISIBLE statement: {expressions}")
+
+    def evaluate_expression(self, expression):
+        """Evaluate expressions recursively."""
+        # Handle single tokens (literals or variables)
+        print(f"Evaluating expression: {expression}")
+        if isinstance(expression, str):
+            # Check for numeric literals
+            if expression.isdigit():
+                return int(expression)  # NUMBR
+            try:
+                return float(expression)  # NUMBAR
+            except ValueError:
+                pass
+
+            # Check for string literals
+            if expression.startswith('"') and expression.endswith('"'):
+                return expression.strip('"')  # YARN (remove quotes)
+
+            # Check for boolean literals
+            if expression == "WIN":
+                return 'WIN'  # TROOF
+            if expression == "FAIL":
+                return 'FAIL'  # TROOF
+
+            # Check for variables in the symbol table
+            if expression in self.symbol_table:
+                value = self.symbol_table[expression]
+                if value == "NOOB":
+                    return value  # Allow NOOB for non-arithmetic contexts
+                return value
+
+            # If the expression is not recognized
+            self.errors.append(f"Undefined identifier: {expression}")
+            return None
+
+        # Handle nested list-style literals (like ['"', 'seventeen', '"'])
+        elif isinstance(expression, list):
+            if len(expression) == 1:  # Single token wrapped in a list
+                return self.evaluate_expression(expression[0])
+            elif len(expression) > 1 and expression[0] == '"' and expression[-1] == '"':  # String literal
+                return ''.join(expression[1:-1])  # Concatenate string parts
+
+            # Handle arithmetic or logical operators
+            operator = expression[0]
+            if operator in {"SUM OF", "DIFF OF", "PRODUKT OF", "QUOSHUNT OF", "MOD OF", "BIGGR OF", "SMALLR OF"}:
+                if len(expression) < 4 or expression[2] != "AN":
+                    self.errors.append(f"Invalid binary operation: {expression}")
+                    return None
+                left = self.evaluate_expression(expression[1])  # Evaluate left operand
+                right = self.evaluate_expression(expression[3])  # Evaluate right operand
+                print(f"{operator}: {left} and {right}")  # Debugging
+                if left is None or right is None:
+                    self.errors.append(f"Cannot evaluate operands for operation: {expression}")
+                    return None
+                return self.compute_arithmetic(operator, left, right)
+
+            # Handle BIGGR OF and SMALLR OF
+            elif expression[0] == "BIGGR OF":
+                left = self.evaluate_expression(expression[1])
+                right = self.evaluate_expression(expression[2])
+                if left is None or right is None:
+                    self.errors.append(f"Cannot evaluate operands for BIGGR OF: {expression}")
+                    return None
+                result = max(left, right)
+                print(f"BIGGR OF: Comparing {left} and {right}, result = {result}")  # Debugging
+                return result
+
+
+            elif operator == "SMALLR OF":
+                print(f"SMALLR OF: Evaluating {expression}")
+                left = self.evaluate_expression(expression[1])
+                right = self.evaluate_expression(expression[2])
+                print(f"SMALLR OF: Comparing {left} and {right}")
+                if left is None or right is None:
+                    self.errors.append(f"Cannot evaluate operands for SMALLR OF: {expression}")
+                    return None
+                return min(left, right)
+
+            # Unrecognized operator
             else:
-                # Add variable to symbol table
-                initial_value = statement[3] if len(statement) > 3 and statement[2] == "ITZ" else "NOOB"
-                self.symbol_table[var_name] = initial_value
-        except IndexError:
-            self.errors.append(f"Invalid variable declaration: {statement}")
+                self.errors.append(f"Unrecognized operator: {operator}")
+                return None
 
-    def handle_assignment(self, statement):
-        """Check assignments for correctness."""
-        try:
-            var_name = statement[0]
-            if var_name not in self.symbol_table:
-                self.errors.append(f"Variable '{var_name}' assigned before declaration.")
-            else:
-                # Optionally validate the value type
-                value = statement[2]
-                self.symbol_table[var_name] = value
-        except IndexError:
-            self.errors.append(f"Invalid assignment statement: {statement}")
-
-    def handle_output(self, statement):
-        """Handle VISIBLE (output) statements."""
-        # Verify each argument in the output statement
-        for value in statement[1:]:
-            print(value[0])
-            if isinstance(value, str) and value not in self.symbol_table:
-                self.errors.append(f"Undefined variable '{value}' in output statement.")
-
-    def handle_function_declaration(self, statement):
-        """Handle function declarations."""
-        func_name = statement[1]
-        if func_name in self.symbol_table:
-            self.errors.append(f"Function '{func_name}' is already declared.")
+        # Invalid expression type
         else:
-            self.symbol_table[func_name] = "FUNCTION"
+            self.errors.append(f"Invalid expression format: {expression}")
+            return None
 
-    def handle_control_structure(self, statement):
-        """Validate control structures."""
-        # Add logic for O RLY?, IM IN YR, etc., as needed
-        pass
+    def compute_arithmetic(self, operator, left, right):
+        """Perform arithmetic operations."""
+        try:
+            if operator == "SUM OF":
+                return left + right
+            elif operator == "DIFF OF":
+                return left - right
+            elif operator == "PRODUKT OF":
+                return left * right
+            elif operator == "QUOSHUNT OF":
+                return left / right
+            elif operator == "MOD OF":
+                return left % right
+            elif operator == 'BIGGR OF':
+                return max(left, right)
+            elif operator == 'SMALLR OF':
+                return min(left, right)
+            elif operator == 'BOTH OF':
+                return 'WIN' if (left and right) else 'FAIL'
+            elif operator == 'EITHER OF':
+                return 'WIN' if (left or right) else 'FAIL'
+            elif operator == 'WON OF':
+                return 'WIN' if (left or right) and not (left and right) else 'FAIL'
+            elif operator == 'BOTH SAEM':
+                return 'WIN' if (left == right) else 'FAIL'
+            elif operator == 'DIFFRINT':
+                return 'WIN' if (left != right) else 'FAIL'
+            else:
+                self.errors.append(f"Unknown arithmetic operator: {operator}")
+                return None
+        except TypeError:
+            self.errors.append(f"Type error in operation '{operator}' with operands '{left}' and '{right}'.")
+            return None
+        except ZeroDivisionError:
+            self.errors.append("Division by zero.")
+            return None
+
+    def get_visible_outputs(self):
+        """Return all visible outputs."""
+        return self.visible_outputs
 
     def report_errors(self):
         """Return all semantic errors."""
         return self.errors
+
