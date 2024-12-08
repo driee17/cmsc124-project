@@ -1,3 +1,6 @@
+import lexical_analyzer
+# lexical_analyzer.KEYWORDS
+
 class SemanticAnalyzer:
     def __init__(self):
         self.symbol_table = {"IT": []}  # Ensure IT starts as an empty list
@@ -5,6 +8,7 @@ class SemanticAnalyzer:
         self.visible_outputs = []  # Holds outputs of VISIBLE statements
         self.in_variable_block = False  # Track if inside a WAZZUP block
         self.it = None          # Implicit IT variable
+        self.operators = {"SUM OF", "DIFF OF", "PRODUKT OF", "QUOSHUNT OF", "MOD OF", "BIGGR OF", "SMALLR OF", "BOTH SAEM", "DIFFRINT", "BOTH OF", "EITHER OF", "WON OF", "ALL OF", "ANY OF"}
 
     def analyze(self, syntax_output, input_callback=None):
         """Analyze the structured output from the syntax analyzer."""
@@ -19,6 +23,7 @@ class SemanticAnalyzer:
         return len(self.errors) == 0
 
     def process_statement(self, statement, input_callback=None):
+
         print(f"Processing statement: {statement}")
         """Process a single statement."""
         
@@ -66,6 +71,89 @@ class SemanticAnalyzer:
         else:
             self.errors.append(f"Invalid statement format: {statement}")
 
+    def evaluate_expression(self, expression):
+        """Evaluate expressions recursively."""
+        print(f"Evaluating expression: {expression}")
+
+        if isinstance(expression, str):
+            return self.handle_literals(expression)
+
+        # Handle nested or structured expressions
+        elif isinstance(expression, list):
+            # Handle single-element list
+            if len(expression) == 1:
+                return self.evaluate_expression(expression[0])
+
+            # Handle string literals in list form
+            if len(expression) > 1 and expression[0] == '"' and expression[-1] == '"':
+                value = expression[1:-1][0]
+                # Check for numeric literals
+                if value.isdigit():
+                    return int(value)
+                try:
+                    return float(value)
+                except ValueError:
+                    return value  # Return as YARN if not numeric
+
+            # Concatenation with '+' operator
+            if '+' in expression:
+                return self.handle_concatenation(expression)
+
+            # Handle SMOOSH operation
+            if expression[0] == "SMOOSH":
+                return self.handle_smoosh(expression[1:])
+
+            # Handle arithmetic or logical operators
+            if isinstance(expression, list) and len(expression) > 0:
+                operator = expression[0]
+
+                # Check if the operator is a string and belongs to supported operators
+                if isinstance(operator, str) and operator in self.operators:
+                    if len(expression) < 4 or expression[2] != "AN":
+                        self.errors.append(f"Invalid binary operation: {expression}")
+                        return None
+                    left = self.evaluate_expression(expression[1])  # Evaluate left operand
+                    right = self.evaluate_expression(expression[3])  # Evaluate right operand
+                    print(f"{operator}: Left = {left}, Right = {right}")  # Debugging
+                    left = 1 if left == "WIN" else (0 if left == "FAIL" else left)
+                    right = 1 if right == "WIN" else (0 if right == "FAIL" else right)
+                    if left is None or right is None:
+                        self.errors.append(f"Cannot evaluate operands for operation: {expression}")
+                        return None
+                    return self.compute_arithmetic(operator, left, right)
+
+                # Handle BIGGR OF and SMALLR OF operators
+                if isinstance(operator, str) and operator in {"BIGGR OF", "SMALLR OF"}:
+                    if len(expression) < 4 or expression[2] != "AN":
+                        self.errors.append(f"Invalid operation: {expression}")
+                        return None
+                    left = self.evaluate_expression(expression[1])
+                    right = self.evaluate_expression(expression[2])
+                    print(f"{operator}: Left = {left}, Right = {right}")  # Debugging
+                    # left = 1 if left == "WIN" else (0 if left == "FAIL" else left)
+                    # right = 1 if right == "WIN" else (0 if right == "FAIL" else right)
+                    return max(left, right) if operator == "BIGGR OF" else min(left, right)
+
+                # Handle BOTH SAEM and DIFFRINT operators
+                if isinstance(operator, str) and operator in {"BOTH SAEM", "DIFFRINT"}:
+                    if len(expression) < 4 or expression[2] != "AN":
+                        self.errors.append(f"Invalid comparison operation: {expression}")
+                        return None
+                    left = self.evaluate_expression(expression[1])
+                    right = self.evaluate_expression(expression[3])
+                    if left is None or right is None:
+                        self.errors.append(f"Cannot evaluate operands for comparison: {expression}")
+                        return None
+                    # Evaluate the comparison
+                    return left == right if operator == "BOTH SAEM" else left != right
+            # Unrecognized operator
+            else:
+                self.errors.append(f"Unrecognized operator: {operator}")
+                return None
+
+        else:
+            self.errors.append(f"Invalid expression format: {expression}")
+            return None
 
     def handle_assignment(self, statement):
         """Handle variable assignment."""
@@ -80,7 +168,6 @@ class SemanticAnalyzer:
             print(f"Assigned {variable} = {value}")
         else:
             self.errors.append(f"Failed to assign value to {variable}: {value_expression}")
-
 
     def handle_type_cast(self, statement):
         """Process typecasting using IS NOW A or MAEK."""
@@ -123,8 +210,6 @@ class SemanticAnalyzer:
             return str(value)
         else:
             raise ValueError(f"Unsupported type for casting: {new_type}")
-
-
 
     def handle_variable_declaration(self, declaration):
         """Process variable declarations in the WAZZUP block."""
@@ -364,90 +449,6 @@ class SemanticAnalyzer:
             for statement in block:
                 self.process_statement(statement)
 
-    def evaluate_expression(self, expression):
-        """Evaluate expressions recursively."""
-        print(f"Evaluating expression: {expression}")
-
-        if isinstance(expression, str):
-            return self.handle_literals(expression)
-
-        # Handle nested or structured expressions
-        elif isinstance(expression, list):
-            # Handle single-element list
-            if len(expression) == 1:
-                return self.evaluate_expression(expression[0])
-
-            # Handle string literals in list form
-            if len(expression) > 1 and expression[0] == '"' and expression[-1] == '"':
-                value = expression[1:-1][0]
-                # Check for numeric literals
-                if value.isdigit():
-                    return int(value)
-                try:
-                    return float(value)
-                except ValueError:
-                    return value  # Return as YARN if not numeric
-
-            # Concatenation with '+' operator
-            if '+' in expression:
-                return self.handle_concatenation(expression)
-
-            # Handle SMOOSH operation
-            if expression[0] == "SMOOSH":
-                return self.handle_smoosh(expression[1:])
-
-            # Handle arithmetic or logical operators
-            if isinstance(expression, list) and len(expression) > 0:
-                operator = expression[0]
-
-                # Check if the operator is a string and belongs to supported operators
-                if isinstance(operator, str) and operator in {"SUM OF", "DIFF OF", "PRODUKT OF", "QUOSHUNT OF", "MOD OF", "BIGGR OF", "SMALLR OF", "BOTH SAEM", "DIFFRINT"}:
-                    if len(expression) < 4 or expression[2] != "AN":
-                        self.errors.append(f"Invalid binary operation: {expression}")
-                        return None
-                    left = self.evaluate_expression(expression[1])  # Evaluate left operand
-                    right = self.evaluate_expression(expression[3])  # Evaluate right operand
-                    print(f"{operator}: Left = {left}, Right = {right}")  # Debugging
-                    left = 1 if left == "WIN" else (0 if left == "FAIL" else left)
-                    right = 1 if right == "WIN" else (0 if right == "FAIL" else right)
-                    if left is None or right is None:
-                        self.errors.append(f"Cannot evaluate operands for operation: {expression}")
-                        return None
-                    return self.compute_arithmetic(operator, left, right)
-
-                # Handle BIGGR OF and SMALLR OF operators
-                if isinstance(operator, str) and operator in {"BIGGR OF", "SMALLR OF"}:
-                    if len(expression) < 4 or expression[2] != "AN":
-                        self.errors.append(f"Invalid operation: {expression}")
-                        return None
-                    left = self.evaluate_expression(expression[1])
-                    right = self.evaluate_expression(expression[2])
-                    print(f"{operator}: Left = {left}, Right = {right}")  # Debugging
-                    # left = 1 if left == "WIN" else (0 if left == "FAIL" else left)
-                    # right = 1 if right == "WIN" else (0 if right == "FAIL" else right)
-                    return max(left, right) if operator == "BIGGR OF" else min(left, right)
-
-                # Handle BOTH SAEM and DIFFRINT operators
-                if isinstance(operator, str) and operator in {"BOTH SAEM", "DIFFRINT"}:
-                    if len(expression) < 4 or expression[2] != "AN":
-                        self.errors.append(f"Invalid comparison operation: {expression}")
-                        return None
-                    left = self.evaluate_expression(expression[1])
-                    right = self.evaluate_expression(expression[3])
-                    if left is None or right is None:
-                        self.errors.append(f"Cannot evaluate operands for comparison: {expression}")
-                        return None
-                    # Evaluate the comparison
-                    return left == right if operator == "BOTH SAEM" else left != right
-            # Unrecognized operator
-            else:
-                self.errors.append(f"Unrecognized operator: {operator}")
-                return None
-
-        else:
-            self.errors.append(f"Invalid expression format: {expression}")
-            return None
-
     def compute_arithmetic(self, operator, left, right):
         """Perform arithmetic operations."""
         try:
@@ -481,6 +482,8 @@ class SemanticAnalyzer:
                 return 'WIN' if (left == right) else 'FAIL'
             elif operator == 'DIFFRINT':
                 return 'WIN' if (left != right) else 'FAIL'
+            elif operator == 'ALL OF':
+                return 'WIN' if (left and right) else 'FAIL'
             else:
                 self.errors.append(f"Unknown arithmetic operator: {operator}")
                 return None
