@@ -4,6 +4,7 @@ class SemanticAnalyzer:
         self.errors = []        # Accumulate semantic errors
         self.visible_outputs = []  # Holds outputs of VISIBLE statements
         self.in_variable_block = False  # Track if inside a WAZZUP block
+        self.it = None          # Implicit IT variable
 
     def analyze(self, syntax_output, input_callback=None):
         """Analyze the structured output from the syntax analyzer."""
@@ -69,31 +70,43 @@ class SemanticAnalyzer:
 
     def handle_visible(self, expressions):
         """Process VISIBLE statements."""
-        result = self.evaluate_expression(expressions)
-        if result is not None:
-            # Ensure IT is initialized as a list if it's not already
-            if "IT" not in self.symbol_table:
-                self.symbol_table["IT"] = []
+        print(f"Processing VISIBLE: {expressions}")
+        
+        # Function to check if concatenation ('+') is present
+        def contains_plus(exp):
+            return isinstance(exp, list) and '+' in exp
 
-            # Check if the expression directly refers to an identifier
-            if isinstance(expressions, str) and expressions in self.symbol_table:
-                # Output value but do not append to IT
-                output = f"{result}"
-                print(f"VISIBLE: {output}")  # Debugging output
-                self.visible_outputs.append(output)  # Store for GUI
-            elif not self.is_expression_tied_to_identifier(expressions):
-                # Append to IT if the expression is not tied to an identifier
-                self.symbol_table["IT"].append(result)
-                output = f"{result}"
-                print(f"VISIBLE (IT): {output}")  # Debugging for IT
-                self.visible_outputs.append(output)  # Store for GUI
-            else:
-                # Output without appending to IT
-                output = f"{result}"
-                print(f"VISIBLE (not IT): {output}")  # Debugging for non-IT values
-                self.visible_outputs.append(output)  # Store for GUI
+        # Handle concatenation explicitly
+        if contains_plus(expressions):
+            concatenated_result = ''
+            for part in expressions:
+                if part == '+':
+                    print("Found '+', skipping to next part")  # Debugging
+                    continue
+                # Evaluate each part recursively
+                evaluated = self.evaluate_expression(part)
+                print(f"Evaluated part: {part}, Result: {evaluated}")  # Debugging
+                if evaluated is None:
+                    self.errors.append(f"Failed to evaluate part of VISIBLE statement: {part}")
+                    return
+                concatenated_result += str(evaluated)
+            # Store the concatenated result in 'IT'
+            self.symbol_table["IT"] = concatenated_result
+            print(f"VISIBLE (IT): {concatenated_result}")  # Debugging
+            self.visible_outputs.append(concatenated_result)  # Store for GUI
         else:
-            self.errors.append(f"Failed to evaluate VISIBLE statement: {expressions}")
+            # Evaluate as a single expression
+            result = self.evaluate_expression(expressions)
+            if result is not None:
+                print(f"Evaluated single expression for VISIBLE: {result}")  # Debugging
+                # Store in 'IT' only for non-identifier results
+                if not self.is_expression_tied_to_identifier(expressions):
+                    if "IT" not in self.symbol_table or not isinstance(self.symbol_table["IT"], list):
+                        self.symbol_table["IT"] = []
+                    self.symbol_table["IT"].append(result)
+                self.visible_outputs.append(result)  # Store for GUI
+            else:
+                self.errors.append(f"Failed to evaluate VISIBLE statement: {expressions}")
 
     def is_expression_tied_to_identifier(self, expression):
         """Check if the given expression corresponds to an explicit identifier."""
@@ -135,11 +148,10 @@ class SemanticAnalyzer:
 
     def evaluate_expression(self, expression):
         """Evaluate expressions recursively."""
-        print(f"Evaluating expression: {expression}")
-
         # Handle single tokens (literals or variables)
+        print(f"Evaluating expression: {expression}")
         if isinstance(expression, str):
-            # Numeric literals
+            # Check for numeric literals
             if expression.isdigit():
                 return int(expression)  # NUMBR
             try:
@@ -147,31 +159,58 @@ class SemanticAnalyzer:
             except ValueError:
                 pass
 
-            # String literals
+            # Check for string literals
             if expression.startswith('"') and expression.endswith('"'):
-                return expression.strip('"')  # YARN (remove quotes)
+                value = expression.strip('"')  # YARN (remove quotes)
+                # Try converting to number if used in arithmetic
+                if value.isdigit():
+                    return int(value)
+                try:
+                    return float(value)
+                except ValueError:
+                    return value  # Return as YARN if not numeric
 
-            # Boolean literals
+            # Check for boolean literals
             if expression == "WIN":
-                return 'WIN'  # TROOF
+                return True  # TROOF
             if expression == "FAIL":
-                return 'FAIL'  # TROOF
+                return False  # TROOF
 
-            # Variables from the symbol table
+            # Check for variables in the symbol table
             if expression in self.symbol_table:
-                return self.symbol_table[expression]
+                value = self.symbol_table[expression]
+                if value == "NOOB":
+                    return value  # Allow NOOB for non-arithmetic contexts
+                return value
 
-            # Undefined identifier
+            # If the expression is not recognized
             self.errors.append(f"Undefined identifier: {expression}")
             return None
 
-        # Handle nested list-style literals
+        # Handle nested list-style literals (like ['"', 'seventeen', '"'])
         elif isinstance(expression, list):
-            if len(expression) == 1:  # Single token wrapped in a list
+            # Handle single-element list (e.g., ['x'] or nested lists like [['x']])
+            if len(expression) == 1:
+                print(f"Single element list: {expression}")  # Debugging
                 return self.evaluate_expression(expression[0])
-            elif len(expression) > 1 and expression[0] == '"' and expression[-1] == '"':  # String literal
-                return ''.join(expression[1:-1])  # Concatenate string parts
 
+            # Handle string literals in list form (e.g., ['"', 'declarations', '"'])
+            if len(expression) > 1 and expression[0] == '"' and expression[-1] == '"':
+                print(f"String literal in list form: {expression}")  # Debugging
+                return ''.join(expression[1:-1])
+
+            # Concatenation with '+' operator
+            if '+' in expression:
+                concatenated = ''
+                for part in expression:
+                    if part == '+':
+                        continue
+                    value = self.evaluate_expression(part)
+                    if value is None:
+                        self.errors.append(f"Failed to evaluate part of concatenation: {part}")
+                        return None
+                    concatenated += str(value)
+                return concatenated
             # Handle arithmetic or logical operators
             operator = expression[0]
             if operator in {"SUM OF", "DIFF OF", "PRODUKT OF", "QUOSHUNT OF", "MOD OF", "BIGGR OF", "SMALLR OF"}:
@@ -180,33 +219,29 @@ class SemanticAnalyzer:
                     return None
                 left = self.evaluate_expression(expression[1])  # Evaluate left operand
                 right = self.evaluate_expression(expression[3])  # Evaluate right operand
-                print(f"{operator}: {left} and {right}")  # Debugging
+                print(f"{operator}: Left = {left}, Right = {right}")  # Debugging
+                left = 1 if left == "WIN" else (0 if left == "FAIL" else left)
+                right = 1 if right == "WIN" else (0 if right == "FAIL" else right)
                 if left is None or right is None:
                     self.errors.append(f"Cannot evaluate operands for operation: {expression}")
                     return None
                 return self.compute_arithmetic(operator, left, right)
 
-            elif operator == "BIGGR OF":
+            # Handle BIGGR OF and SMALLR OF
+            elif operator in {"BIGGR OF", "SMALLR OF"}:
                 left = self.evaluate_expression(expression[1])
                 right = self.evaluate_expression(expression[2])
-                if left is None or right is None:
-                    self.errors.append(f"Cannot evaluate operands for BIGGR OF: {expression}")
-                    return None
-                return max(left, right)
+                print(f"{operator}: Left = {left}, Right = {right}")  # Debugging
+                left = 1 if left == "WIN" else (0 if left == "FAIL" else left)
+                right = 1 if right == "WIN" else (0 if right == "FAIL" else right)
+                return max(left, right) if operator == "BIGGR OF" else min(left, right)
 
-            elif operator == "SMALLR OF":
-                left = self.evaluate_expression(expression[1])
-                right = self.evaluate_expression(expression[2])
-                print(f"SMALLR OF: Comparing {left} and {right}")
-                if left is None or right is None:
-                    self.errors.append(f"Cannot evaluate operands for SMALLR OF: {expression}")
-                    return None
-                return min(left, right)
-
+            # Unrecognized operator
             else:
                 self.errors.append(f"Unrecognized operator: {operator}")
                 return None
 
+        # Invalid expression type
         else:
             self.errors.append(f"Invalid expression format: {expression}")
             return None
@@ -221,8 +256,14 @@ class SemanticAnalyzer:
             elif operator == "PRODUKT OF":
                 return left * right
             elif operator == "QUOSHUNT OF":
+                if right == 0:
+                    self.errors.append("Division by zero in QUOSHUNT OF")
+                    return None
                 return left / right
             elif operator == "MOD OF":
+                if right == 0:
+                    self.errors.append("Division by zero in MOD OF")
+                    return None
                 return left % right
             elif operator == 'BIGGR OF':
                 return max(left, right)

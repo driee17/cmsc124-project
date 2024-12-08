@@ -187,11 +187,22 @@ class LOLCodeGUI:
 
             # Collect and display all outputs from VISIBLE statements
             visible_outputs = semantics.get_visible_outputs() 
-            wrapped_output = "\n".join(visible_outputs)
+            wrapped_output = "\n".join(map(str, visible_outputs))
             self.console.delete(1.0, tk.END)
             self.console.insert(tk.END, wrapped_output)
+            print("Semantic Analysis Successful")
 
         else:
+            # Populate the symbol table TreeView
+            for identifier, value in semantics.symbol_table.items():
+                if identifier == "IT" and not value:  # Skip IT if it is empty
+                    continue
+                self.symbol_table.insert("", "end", values=(identifier, value))
+
+            # Collect and display all outputs from VISIBLE statements
+            visible_outputs = semantics.get_visible_outputs() 
+            # Convert all outputs to strings before joining
+            wrapped_output = "\n".join(map(str, visible_outputs))
             errors = "\n".join(semantics.report_errors())
             self.console.delete(1.0, tk.END)
             self.console.insert(tk.END, f"Semantic Analysis Errors:\n{errors}\n")
