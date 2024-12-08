@@ -185,6 +185,9 @@ class SemanticAnalyzer:
                 self.errors.append(f"Error casting {variable} to {new_type}: {str(e)}")
         elif statement[0] == "MAEK":  # MAEK operator returns casted value
             variable, new_type = statement[1], statement[2]
+            if new_type == "A":
+                print("whoopsie A =================================================================================================================================")
+                new_type == statement[3]
             if variable not in self.symbol_table:
                 self.errors.append(f"Undefined variable: {variable}")
                 return
@@ -235,22 +238,40 @@ class SemanticAnalyzer:
         # Function to check if concatenation ('+') is present
         def contains_plus(exp):
             return isinstance(exp, list) and '+' in exp
+        
+        def contains_an(exp):
+            return isinstance(exp, list) and 'AN' in exp
 
         result = ''
-        for part in expressions:
-            if part == 'AN':  # Skip the `AN` keyword
-                continue
-            if contains_plus(part):  # Handle concatenation using `+`
-                concatenated_result = ''
-                for subpart in part:
-                    if subpart == '+':
-                        continue
-                    evaluated = self.evaluate_expression(subpart)
-                    if evaluated is None:
-                        self.errors.append(f"Failed to evaluate part of concatenation in VISIBLE: {subpart}")
-                        return
-                    concatenated_result += str(evaluated)
-                result += concatenated_result
+        # for part in expressions:
+            # print(f"{part} SDGSJKGNSKDFNKDFNSKDJF11111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111")
+        if contains_an(expressions):  # Skip the `AN` keyword
+            # continue
+            concatenated_result = ''
+            for word in expressions:
+                print(word)
+                if word == 'AN':
+                    continue
+                evaluated = self.evaluate_expression(word)
+                if evaluated is None:
+                    self.errors.append(f"Failed to evaluate part of concatenation in VISIBLE: {word}")
+                    return
+                print(concatenated_result)
+                concatenated_result += str(evaluated)
+            result += concatenated_result
+            self.visible_outputs.append(result)
+        elif contains_plus(expressions):  # Handle concatenation using `+`
+            concatenated_result = ''
+            for subpart in expressions:
+                if subpart == '+':
+                    continue
+                evaluated = self.evaluate_expression(subpart)
+                if evaluated is None:
+                    self.errors.append(f"Failed to evaluate part of concatenation in VISIBLE: {subpart}")
+                    return
+                concatenated_result += str(evaluated)
+            result += concatenated_result
+            self.visible_outputs.append(result)
         else:
             # Evaluate as a single expression
             result = self.evaluate_expression(expressions)
@@ -339,7 +360,7 @@ class SemanticAnalyzer:
         """Concatenate parts using the '+' operator."""
         result = ''
         for part in expressions:
-            if part == '+':
+            if part == '+' or part == 'AN':
                 continue
             evaluated = self.evaluate_expression(part)
             if evaluated is None:
