@@ -21,8 +21,13 @@ class SemanticAnalyzer:
     def process_statement(self, statement, input_callback=None):
         print(f"Processing statement: {statement}")
         """Process a single statement."""
-        if isinstance(statement, str):  # Handle standalone keywords
-            if statement == "HAI":
+        
+        # Handle standalone variable evaluation
+        if isinstance(statement, str):
+            if statement in self.symbol_table:  # If it's a valid variable
+                self.symbol_table["IT"] = self.evaluate_expression(statement)  # Assign its value to IT
+                return
+            elif statement == "HAI":
                 return  # Ignore program start
             elif statement == "KTHXBYE":
                 return  # Ignore program end
@@ -53,6 +58,8 @@ class SemanticAnalyzer:
                 self.handle_smoosh(statement[1:])
             elif keyword == "O RLY?":
                 self.handle_orly(statement)
+            elif keyword == "WTF?":
+                self.handle_wtf(statement)
             else:
                 self.errors.append(f"Unrecognized statement: {statement}")
         else:
@@ -310,6 +317,45 @@ class SemanticAnalyzer:
                     break
             if not executed:  # No MEBBE conditions matched
                 self.execute_block(no_wai_block)
+
+    def handle_wtf(self, statement):
+        """Process WTF? (switch-case) statements."""
+        print(f"Processing WTF?: {statement}")
+        if len(statement) < 3 or statement[-1] != "OIC":
+            self.errors.append(f"Invalid WTF? structure: {statement}")
+            return
+
+        # Get the value of IT for comparison
+        switch_value = self.symbol_table.get("IT", None)
+
+        # Extract cases and default
+        cases = []
+        default_block = None
+
+        for i, part in enumerate(statement[1:]):
+            if part == "OMG":
+                case_value = self.evaluate_expression(statement[i + 2])
+                case_block = statement[i + 3:]
+                cases.append((case_value, case_block))
+            elif part == "OMGWTF":
+                default_block = statement[i + 2:]
+                break
+
+        # Match and execute the appropriate case
+        executed = False
+        for case_value, case_block in cases:
+            if switch_value == case_value:
+                for stmt in case_block:
+                    if stmt == "GTFO":
+                        return  # Exit the WTF? structure
+                    self.process_statement(stmt)
+                executed = True
+                break
+
+        # Execute default block if no case matches
+        if not executed and default_block:
+            for stmt in default_block:
+                self.process_statement(stmt)
 
     def execute_block(self, block):
         """Execute a block of statements."""
