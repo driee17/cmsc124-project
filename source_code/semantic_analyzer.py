@@ -50,8 +50,6 @@ class SemanticAnalyzer:
                 self.handle_gimmeh(statement[1], input_callback=input_callback)
             elif keyword == "I HAS A":
                 self.handle_variable_declaration(statement)
-            elif keyword == "R":
-                self.handle_assignment(statement)
             elif keyword in {"IS NOW A", "MAEK"}:
                 self.handle_type_cast(statement)
             elif keyword == "SMOOSH":
@@ -60,6 +58,9 @@ class SemanticAnalyzer:
                 self.handle_orly(statement)
             elif keyword == "WTF?":
                 self.handle_wtf(statement)
+            elif keyword in self.symbol_table: # for R keyword
+                if statement[1] == "R":
+                    self.handle_assignment(statement)
             else:
                 self.errors.append(f"Unrecognized statement: {statement}")
         else:
