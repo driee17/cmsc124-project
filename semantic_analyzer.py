@@ -43,10 +43,78 @@ class SemanticAnalyzer:
                 self.handle_visible(statement[1:])
             elif keyword == "GIMMEH":
                 self.handle_gimmeh(statement[1], input_callback=input_callback)
+            elif keyword == "I HAS A":
+                self.handle_variable_declaration(statement)
+            elif keyword == "R":
+                self.handle_assignment(statement)
+            elif keyword in {"IS NOW A", "MAEK"}:
+                self.handle_type_cast(statement)
+            elif keyword == "SMOOSH":
+                self.handle_smoosh(statement[1:])
             else:
                 self.errors.append(f"Unrecognized statement: {statement}")
         else:
             self.errors.append(f"Invalid statement format: {statement}")
+
+
+    def handle_assignment(self, statement):
+        """Handle variable assignment."""
+        if len(statement) < 3 or statement[1] != "R":
+            self.errors.append(f"Invalid assignment statement: {statement}")
+            return
+
+        variable, value_expression = statement[0], statement[2]
+        value = self.evaluate_expression(value_expression)
+        if value is not None:
+            self.symbol_table[variable] = value
+            print(f"Assigned {variable} = {value}")
+        else:
+            self.errors.append(f"Failed to assign value to {variable}: {value_expression}")
+
+
+    def handle_type_cast(self, statement):
+        """Process typecasting using IS NOW A or MAEK."""
+        if statement[2] == "IS NOW A":  # In-place typecasting
+            if len(statement) != 4:
+                self.errors.append(f"Invalid typecasting statement: {statement}")
+                return
+            variable, new_type = statement[0], statement[3]
+            if variable not in self.symbol_table:
+                self.errors.append(f"Undefined variable: {variable}")
+                return
+
+            value = self.symbol_table[variable]
+            try:
+                self.symbol_table[variable] = self.cast_value(value, new_type)
+                print(f"Re-cast {variable} to {new_type} = {self.symbol_table[variable]}")
+            except (ValueError, TypeError) as e:
+                self.errors.append(f"Error casting {variable} to {new_type}: {str(e)}")
+        elif statement[0] == "MAEK":  # MAEK operator returns casted value
+            variable, new_type = statement[1], statement[2]
+            if variable not in self.symbol_table:
+                self.errors.append(f"Undefined variable: {variable}")
+                return
+            value = self.symbol_table[variable]
+            try:
+                return self.cast_value(value, new_type)
+            except (ValueError, TypeError) as e:
+                self.errors.append(f"Error casting {variable} to {new_type}: {str(e)}")
+                return None
+
+    def cast_value(self, value, new_type):
+        """Helper method to cast a value to a specified type."""
+        if new_type == "NUMBAR":
+            return float(value)
+        elif new_type == "NUMBR":
+            return int(float(value))
+        elif new_type == "TROOF":
+            return bool(value)
+        elif new_type == "YARN":
+            return str(value)
+        else:
+            raise ValueError(f"Unsupported type for casting: {new_type}")
+
+
 
     def handle_variable_declaration(self, declaration):
         """Process variable declarations in the WAZZUP block."""
@@ -76,29 +144,25 @@ class SemanticAnalyzer:
         def contains_plus(exp):
             return isinstance(exp, list) and '+' in exp
 
-        # Handle concatenation explicitly
-        if contains_plus(expressions):
-            concatenated_result = ''
-            for part in expressions:
-                if part == '+':
-                    print("Found '+', skipping to next part")  # Debugging
-                    continue
-                # Evaluate each part recursively
-                evaluated = self.evaluate_expression(part)
-                print(f"Evaluated part: {part}, Result: {evaluated}")  # Debugging
-                if evaluated is None:
-                    self.errors.append(f"Failed to evaluate part of VISIBLE statement: {part}")
-                    return
-                concatenated_result += str(evaluated)
-            # Store the concatenated result in 'IT'
-            self.symbol_table["IT"] = concatenated_result
-            print(f"VISIBLE (IT): {concatenated_result}")  # Debugging
-            self.visible_outputs.append(concatenated_result)  # Store for GUI
+        result = ''
+        for part in expressions:
+            if part == 'AN':  # Skip the `AN` keyword
+                continue
+            if contains_plus(part):  # Handle concatenation using `+`
+                concatenated_result = ''
+                for subpart in part:
+                    if subpart == '+':
+                        continue
+                    evaluated = self.evaluate_expression(subpart)
+                    if evaluated is None:
+                        self.errors.append(f"Failed to evaluate part of concatenation in VISIBLE: {subpart}")
+                        return
+                    concatenated_result += str(evaluated)
+                result += concatenated_result
         else:
             # Evaluate as a single expression
             result = self.evaluate_expression(expressions)
             if result is not None:
-                print(f"Evaluated single expression for VISIBLE: {result}")  # Debugging
                 # Store in 'IT' only for non-identifier results
                 if not self.is_expression_tied_to_identifier(expressions):
                     if "IT" not in self.symbol_table or not isinstance(self.symbol_table["IT"], list):
@@ -138,65 +202,88 @@ class SemanticAnalyzer:
                         self.symbol_table[variable_name] = float(user_input)
                 except ValueError:
                     self.symbol_table[variable_name] = user_input  # Store as YARN (string)
-                
-                print(f"User input received for {variable_name}: {self.symbol_table[variable_name]}")
             else:
                 self.errors.append(f"No input provided for variable: {variable_name}")
         else:
             self.errors.append("No input callback provided for GIMMEH.")
 
+    def handle_literals(self, token):
+        """Handle numeric, string, boolean literals, or variables."""
+        if token.isdigit():
+            return int(token)  # NUMBR
+        try:
+            return float(token)  # NUMBAR
+        except ValueError:
+            pass
 
+        # Check for string literals
+        if token.startswith('"') and token.endswith('"'):
+            value = token.strip('"')  
+            if value.isdigit():
+                return int(value)
+            try:
+                return float(value)
+            except ValueError:
+                return value  # Return as YARN if not numeric
+
+        # Check for boolean literals
+        if token == "WIN":
+            return 'WIN'  # TROOF
+        if token == "FAIL":
+            return 'FAIL'  # TROOF
+
+        # Check for variables in the symbol table
+        if token in self.symbol_table:
+            value = self.symbol_table[token]
+            if value == "NOOB":
+                return value  # Allow NOOB for non-arithmetic contexts
+            return value
+
+        # Undefined token
+        self.errors.append(f"Undefined identifier: {token}")
+        return None
+
+    def handle_concatenation(self, expressions):
+        """Concatenate parts using the '+' operator."""
+        result = ''
+        for part in expressions:
+            if part == '+':
+                continue
+            evaluated = self.evaluate_expression(part)
+            if evaluated is None:
+                self.errors.append(f"Failed to evaluate part of concatenation: {part}")
+                return None
+            result += str(evaluated)
+        return result
+
+    def handle_smoosh(self, expressions):
+        """Concatenate multiple operands into a single string."""
+        result = ''
+        for part in expressions:
+            if part == 'AN':  # Skip the 'AN' keyword
+                continue
+            evaluated = self.evaluate_expression(part)
+            if evaluated is None:
+                self.errors.append(f"Failed to evaluate part of SMOOSH: {part}")
+                return None
+            result += str(evaluated)  # Convert to YARN if necessary
+        return result
+    
     def evaluate_expression(self, expression):
         """Evaluate expressions recursively."""
-        # Handle single tokens (literals or variables)
         print(f"Evaluating expression: {expression}")
+
         if isinstance(expression, str):
-            # Check for numeric literals
-            if expression.isdigit():
-                return int(expression)  # NUMBR
-            try:
-                return float(expression)  # NUMBAR
-            except ValueError:
-                pass
+            return self.handle_literals(expression)
 
-            # Check for string literals
-            if expression.startswith('"') and expression.endswith('"'):
-                value = expression.strip('"')  # YARN (remove quotes)
-                # Try converting to number if used in arithmetic
-                if value.isdigit():
-                    return int(value)
-                try:
-                    return float(value)
-                except ValueError:
-                    return value  # Return as YARN if not numeric
-
-            # Check for boolean literals
-            if expression == "WIN":
-                return True  # TROOF
-            if expression == "FAIL":
-                return False  # TROOF
-
-            # Check for variables in the symbol table
-            if expression in self.symbol_table:
-                value = self.symbol_table[expression]
-                if value == "NOOB":
-                    return value  # Allow NOOB for non-arithmetic contexts
-                return value
-
-            # If the expression is not recognized
-            self.errors.append(f"Undefined identifier: {expression}")
-            return None
-
-        # Handle nested list-style literals (like ['"', 'seventeen', '"'])
+        # Handle nested or structured expressions
         elif isinstance(expression, list):
-            # Handle single-element list (e.g., ['x'] or nested lists like [['x']])
+            # Handle single-element list
             if len(expression) == 1:
-                print(f"Single element list: {expression}")  # Debugging
                 return self.evaluate_expression(expression[0])
 
-            # Handle string literals in list form (e.g., ['"', 'declarations', '"'])
+            # Handle string literals in list form
             if len(expression) > 1 and expression[0] == '"' and expression[-1] == '"':
-                print(f"String literal in list form: {expression}")  # Debugging
                 value = expression[1:-1][0]
                 # Check for numeric literals
                 if value.isdigit():
@@ -208,47 +295,48 @@ class SemanticAnalyzer:
 
             # Concatenation with '+' operator
             if '+' in expression:
-                concatenated = ''
-                for part in expression:
-                    if part == '+':
-                        continue
-                    value = self.evaluate_expression(part)
-                    if value is None:
-                        self.errors.append(f"Failed to evaluate part of concatenation: {part}")
-                        return None
-                    concatenated += str(value)
-                return concatenated
-            # Handle arithmetic or logical operators
-            operator = expression[0]
-            if operator in {"SUM OF", "DIFF OF", "PRODUKT OF", "QUOSHUNT OF", "MOD OF", "BIGGR OF", "SMALLR OF"}:
-                if len(expression) < 4 or expression[2] != "AN":
-                    self.errors.append(f"Invalid binary operation: {expression}")
-                    return None
-                left = self.evaluate_expression(expression[1])  # Evaluate left operand
-                right = self.evaluate_expression(expression[3])  # Evaluate right operand
-                print(f"{operator}: Left = {left}, Right = {right}")  # Debugging
-                left = 1 if left == "WIN" else (0 if left == "FAIL" else left)
-                right = 1 if right == "WIN" else (0 if right == "FAIL" else right)
-                if left is None or right is None:
-                    self.errors.append(f"Cannot evaluate operands for operation: {expression}")
-                    return None
-                return self.compute_arithmetic(operator, left, right)
+                return self.handle_concatenation(expression)
 
-            # Handle BIGGR OF and SMALLR OF
-            elif operator in {"BIGGR OF", "SMALLR OF"}:
-                left = self.evaluate_expression(expression[1])
-                right = self.evaluate_expression(expression[2])
-                print(f"{operator}: Left = {left}, Right = {right}")  # Debugging
-                left = 1 if left == "WIN" else (0 if left == "FAIL" else left)
-                right = 1 if right == "WIN" else (0 if right == "FAIL" else right)
-                return max(left, right) if operator == "BIGGR OF" else min(left, right)
+            # Handle SMOOSH operation
+            if expression[0] == "SMOOSH":
+                return self.handle_smoosh(expression[1:])
+
+            # Handle arithmetic or logical operators
+            if isinstance(expression, list) and len(expression) > 0:
+                operator = expression[0]
+
+                # Check if the operator is a string and belongs to supported operators
+                if isinstance(operator, str) and operator in {"SUM OF", "DIFF OF", "PRODUKT OF", "QUOSHUNT OF", "MOD OF", "BIGGR OF", "SMALLR OF"}:
+                    if len(expression) < 4 or expression[2] != "AN":
+                        self.errors.append(f"Invalid binary operation: {expression}")
+                        return None
+                    left = self.evaluate_expression(expression[1])  # Evaluate left operand
+                    right = self.evaluate_expression(expression[3])  # Evaluate right operand
+                    print(f"{operator}: Left = {left}, Right = {right}")  # Debugging
+                    left = 1 if left == "WIN" else (0 if left == "FAIL" else left)
+                    right = 1 if right == "WIN" else (0 if right == "FAIL" else right)
+                    if left is None or right is None:
+                        self.errors.append(f"Cannot evaluate operands for operation: {expression}")
+                        return None
+                    return self.compute_arithmetic(operator, left, right)
+
+                # Handle BIGGR OF and SMALLR OF operators
+                if isinstance(operator, str) and operator in {"BIGGR OF", "SMALLR OF"}:
+                    if len(expression) < 3:
+                        self.errors.append(f"Invalid operation: {expression}")
+                        return None
+                    left = self.evaluate_expression(expression[1])
+                    right = self.evaluate_expression(expression[2])
+                    print(f"{operator}: Left = {left}, Right = {right}")  # Debugging
+                    left = 1 if left == "WIN" else (0 if left == "FAIL" else left)
+                    right = 1 if right == "WIN" else (0 if right == "FAIL" else right)
+                    return max(left, right) if operator == "BIGGR OF" else min(left, right)
 
             # Unrecognized operator
             else:
                 self.errors.append(f"Unrecognized operator: {operator}")
                 return None
 
-        # Invalid expression type
         else:
             self.errors.append(f"Invalid expression format: {expression}")
             return None
