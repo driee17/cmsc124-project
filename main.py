@@ -98,9 +98,7 @@ class LOLCodeGUI:
         self.execute_button.grid(row=2, column=0, columnspan=3, sticky="nsew", padx=5, pady=5)
 
         # CONSOLE
-        self.console = scrolledtext.ScrolledText(
-            root, wrap="word", bg="ivory2", font=("Helvetica", 10), height=15
-        )
+        self.console = scrolledtext.ScrolledText(root, wrap="word", bg="ivory2", font=("Helvetica", 10), height=15)
         self.console.grid(row=3, column=0, columnspan=3, sticky="nsew", padx=5, pady=5)
 
 
@@ -122,7 +120,8 @@ class LOLCodeGUI:
         code = self.text_editor.get(1.0, tk.END).strip()
 
         if not code:
-            self.console.config(text="No code provided!")
+            self.console.delete(1.0, tk.END)
+            self.console.insert(tk.END, "No code provided!\n")
             return
 
         # Clear previous data
@@ -164,19 +163,26 @@ class LOLCodeGUI:
         syntax_analyzer.tokens = tokens[::-1]  # Reverse tokens for stack-based parsing
         try:
             syntax_result = syntax_analyzer.program_parse()
-            self.console.delete(1.0, tk.END)  # Clear existing content
-            self.console.insert(tk.END, f"Syntax Analysis Successful: {syntax_result}\n")
+            self.console.delete(1.0, tk.END)
+            self.console.insert(tk.END, f"Syntax Analysis Successful\n")
         except Exception as e:
-            self.console.config(text=f"Syntax Analysis Error: {e}")
+            self.console.delete(1.0, tk.END)
+            self.console.insert(tk.END, f"Syntax Analysis Error: {e}\n")
             return
 
         # Perform semantic analysis using SemanticAnalyzer
         semantics = semantic_analyzer.SemanticAnalyzer()
-        if semantics.analyze(syntax_result):
+
+        def input_callback(variable_name):
+            return self.get_user_input(variable_name)  # Call GUI input method
+
+        if semantics.analyze(syntax_result, input_callback=input_callback):
             print("Semantic Analysis Successful")
 
             # Populate the symbol table TreeView
             for identifier, value in semantics.symbol_table.items():
+                if identifier == "IT" and not value:  # Skip IT if it is empty
+                    continue
                 self.symbol_table.insert("", "end", values=(identifier, value))
 
             # Collect and display all outputs from VISIBLE statements
@@ -189,6 +195,30 @@ class LOLCodeGUI:
             errors = "\n".join(semantics.report_errors())
             self.console.delete(1.0, tk.END)
             self.console.insert(tk.END, f"Semantic Analysis Errors:\n{errors}\n")
+
+    def get_user_input(self, variable_name):
+        """Create a popup to get input from the user."""
+        input_value = None  # Variable to store user input
+
+        def on_submit():
+            nonlocal input_value
+            input_value = entry.get()  # Get the value from the Entry widget
+            popup.destroy()  # Close the popup window
+
+        # Create the popup window
+        popup = tk.Toplevel(self.root, bg="ivory2")
+        popup.title("User Input")
+        popup.geometry("300x150")  # Set a reasonable size for the popup
+
+        tk.Label(popup, bg="ivory2", text=f"Enter a value for {variable_name}:", font=("Helvetica", 10)).pack(pady=10)
+        entry = tk.Entry(popup, font=("Helvetica", 10))
+        entry.pack(pady=10)
+        tk.Button(popup, text="Submit", bg="steel blue", fg="ivory2", command=on_submit).pack(pady=10)
+
+        popup.grab_set()  # Make the popup modal (prevent interaction with the main window)
+        popup.wait_window()  # Wait until the popup is closed
+        return input_value  # Return the input value
+
 
 if __name__ == "__main__":
     root = tk.Tk()

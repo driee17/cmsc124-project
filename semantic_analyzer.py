@@ -1,26 +1,23 @@
 class SemanticAnalyzer:
     def __init__(self):
-        self.symbol_table = {}  # Track variables/functions and their details
+        self.symbol_table = {"IT": []}  # Ensure IT starts as an empty list
         self.errors = []        # Accumulate semantic errors
         self.visible_outputs = []  # Holds outputs of VISIBLE statements
         self.in_variable_block = False  # Track if inside a WAZZUP block
-        self.it = None          # Implicit IT variable
 
-    def analyze(self, syntax_output):
-        print(f"Symbol Table: {self.symbol_table}") 
+    def analyze(self, syntax_output, input_callback=None):
         """Analyze the structured output from the syntax analyzer."""
         if not isinstance(syntax_output, list):
             self.errors.append("Invalid syntax output structure.")
             return False
 
         for statement in syntax_output:
-            self.process_statement(statement)
-        
+            self.process_statement(statement, input_callback=input_callback)
+
         print(f"Final Symbol Table: {self.symbol_table}")
         return len(self.errors) == 0
 
-
-    def process_statement(self, statement):
+    def process_statement(self, statement, input_callback=None):
         print(f"Processing statement: {statement}")
         """Process a single statement."""
         if isinstance(statement, str):  # Handle standalone keywords
@@ -43,6 +40,8 @@ class SemanticAnalyzer:
                     self.handle_variable_declaration(var_decl)
             elif keyword == "VISIBLE":
                 self.handle_visible(statement[1])
+            elif keyword == "GIMMEH":
+                self.handle_gimmeh(statement[1], input_callback=input_callback)
             else:
                 self.errors.append(f"Unrecognized statement: {statement}")
         else:
@@ -72,19 +71,75 @@ class SemanticAnalyzer:
         """Process VISIBLE statements."""
         result = self.evaluate_expression(expressions)
         if result is not None:
-            output = f"{result}"
-            print(output)  # Print to console for debugging
-            self.visible_outputs.append(output)  # Store for GUI
-            self.it = result  # Update IT variable
+            # Ensure IT is initialized as a list if it's not already
+            if "IT" not in self.symbol_table:
+                self.symbol_table["IT"] = []
+
+            # Check if the expression directly refers to an identifier
+            if isinstance(expressions, str) and expressions in self.symbol_table:
+                # Output value but do not append to IT
+                output = f"{result}"
+                print(f"VISIBLE: {output}")  # Debugging output
+                self.visible_outputs.append(output)  # Store for GUI
+            elif not self.is_expression_tied_to_identifier(expressions):
+                # Append to IT if the expression is not tied to an identifier
+                self.symbol_table["IT"].append(result)
+                output = f"{result}"
+                print(f"VISIBLE (IT): {output}")  # Debugging for IT
+                self.visible_outputs.append(output)  # Store for GUI
+            else:
+                # Output without appending to IT
+                output = f"{result}"
+                print(f"VISIBLE (not IT): {output}")  # Debugging for non-IT values
+                self.visible_outputs.append(output)  # Store for GUI
         else:
             self.errors.append(f"Failed to evaluate VISIBLE statement: {expressions}")
 
+    def is_expression_tied_to_identifier(self, expression):
+        """Check if the given expression corresponds to an explicit identifier."""
+        if isinstance(expression, str):
+            # If the expression is a direct reference to a variable
+            return expression in self.symbol_table
+        if isinstance(expression, list) and len(expression) == 1:
+            # If the expression is wrapped in a list, check the single element
+            return self.is_expression_tied_to_identifier(expression[0])
+        # Otherwise, it's not tied to any specific identifier
+        return False
+
+    def handle_gimmeh(self, variable_name, input_callback=None):
+        """Handle the GIMMEH keyword to prompt user input."""
+        if variable_name not in self.symbol_table:
+            self.errors.append(f"Undefined variable: {variable_name}")
+            return
+
+        if input_callback is not None:
+            # Use the input callback to get input from the GUI
+            user_input = input_callback(variable_name)
+            if user_input is not None:
+                # Store the user input as a YARN but allow for numeric inference
+                try:
+                    # Infer type: NUMBR if integer, NUMBAR if float, else YARN
+                    if user_input.isdigit():
+                        self.symbol_table[variable_name] = int(user_input)
+                    else:
+                        self.symbol_table[variable_name] = float(user_input)
+                except ValueError:
+                    self.symbol_table[variable_name] = user_input  # Store as YARN (string)
+                
+                print(f"User input received for {variable_name}: {self.symbol_table[variable_name]}")
+            else:
+                self.errors.append(f"No input provided for variable: {variable_name}")
+        else:
+            self.errors.append("No input callback provided for GIMMEH.")
+
+
     def evaluate_expression(self, expression):
         """Evaluate expressions recursively."""
-        # Handle single tokens (literals or variables)
         print(f"Evaluating expression: {expression}")
+
+        # Handle single tokens (literals or variables)
         if isinstance(expression, str):
-            # Check for numeric literals
+            # Numeric literals
             if expression.isdigit():
                 return int(expression)  # NUMBR
             try:
@@ -92,28 +147,25 @@ class SemanticAnalyzer:
             except ValueError:
                 pass
 
-            # Check for string literals
+            # String literals
             if expression.startswith('"') and expression.endswith('"'):
                 return expression.strip('"')  # YARN (remove quotes)
 
-            # Check for boolean literals
+            # Boolean literals
             if expression == "WIN":
                 return 'WIN'  # TROOF
             if expression == "FAIL":
                 return 'FAIL'  # TROOF
 
-            # Check for variables in the symbol table
+            # Variables from the symbol table
             if expression in self.symbol_table:
-                value = self.symbol_table[expression]
-                if value == "NOOB":
-                    return value  # Allow NOOB for non-arithmetic contexts
-                return value
+                return self.symbol_table[expression]
 
-            # If the expression is not recognized
+            # Undefined identifier
             self.errors.append(f"Undefined identifier: {expression}")
             return None
 
-        # Handle nested list-style literals (like ['"', 'seventeen', '"'])
+        # Handle nested list-style literals
         elif isinstance(expression, list):
             if len(expression) == 1:  # Single token wrapped in a list
                 return self.evaluate_expression(expression[0])
@@ -134,20 +186,15 @@ class SemanticAnalyzer:
                     return None
                 return self.compute_arithmetic(operator, left, right)
 
-            # Handle BIGGR OF and SMALLR OF
-            elif expression[0] == "BIGGR OF":
+            elif operator == "BIGGR OF":
                 left = self.evaluate_expression(expression[1])
                 right = self.evaluate_expression(expression[2])
                 if left is None or right is None:
                     self.errors.append(f"Cannot evaluate operands for BIGGR OF: {expression}")
                     return None
-                result = max(left, right)
-                print(f"BIGGR OF: Comparing {left} and {right}, result = {result}")  # Debugging
-                return result
-
+                return max(left, right)
 
             elif operator == "SMALLR OF":
-                print(f"SMALLR OF: Evaluating {expression}")
                 left = self.evaluate_expression(expression[1])
                 right = self.evaluate_expression(expression[2])
                 print(f"SMALLR OF: Comparing {left} and {right}")
@@ -156,12 +203,10 @@ class SemanticAnalyzer:
                     return None
                 return min(left, right)
 
-            # Unrecognized operator
             else:
                 self.errors.append(f"Unrecognized operator: {operator}")
                 return None
 
-        # Invalid expression type
         else:
             self.errors.append(f"Invalid expression format: {expression}")
             return None
