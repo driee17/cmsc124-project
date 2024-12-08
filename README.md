@@ -32,9 +32,9 @@ An interpreter for the LOLCode Programming Language created using Python.
    ```
    git clone https://github.com/driee17/cmsc124-project.git
    ```
-2. Open the created folder in the terminal
+2. Open the 'source_code' folder of the repository in the terminal
    ```
-   cd cmsc124-project/
+   cd cmsc124-project/source_code
    ```
 3. Run this code to start the program
    ```
