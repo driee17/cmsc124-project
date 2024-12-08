@@ -40,7 +40,7 @@ class SemanticAnalyzer:
                         break
                     self.handle_variable_declaration(var_decl)
             elif keyword == "VISIBLE":
-                self.handle_visible(statement[1])
+                self.handle_visible(statement[1:])
             elif keyword == "GIMMEH":
                 self.handle_gimmeh(statement[1], input_callback=input_callback)
             else:
@@ -197,7 +197,14 @@ class SemanticAnalyzer:
             # Handle string literals in list form (e.g., ['"', 'declarations', '"'])
             if len(expression) > 1 and expression[0] == '"' and expression[-1] == '"':
                 print(f"String literal in list form: {expression}")  # Debugging
-                return ''.join(expression[1:-1])
+                value = expression[1:-1][0]
+                # Check for numeric literals
+                if value.isdigit():
+                    return int(value)
+                try:
+                    return float(value)
+                except ValueError:
+                    return value  # Return as YARN if not numeric
 
             # Concatenation with '+' operator
             if '+' in expression:
