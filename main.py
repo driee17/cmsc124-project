@@ -177,8 +177,6 @@ class LOLCodeGUI:
             return self.get_user_input(variable_name)  # Call GUI input method
 
         if semantics.analyze(syntax_result, input_callback=input_callback):
-            print("Semantic Analysis Successful")
-
             # Populate the symbol table TreeView
             for identifier, value in semantics.symbol_table.items():
                 if identifier == "IT" and not value:  # Skip IT if it is empty
@@ -186,25 +184,24 @@ class LOLCodeGUI:
                 self.symbol_table.insert("", "end", values=(identifier, value))
 
             # Collect and display all outputs from VISIBLE statements
-            visible_outputs = semantics.get_visible_outputs() 
+            visible_outputs = semantics.get_visible_outputs()
             wrapped_output = "\n".join(map(str, visible_outputs))
-            self.console.delete(1.0, tk.END)
-            self.console.insert(tk.END, wrapped_output)
-            print("Semantic Analysis Successful")
-
+            self.console.insert(tk.END, wrapped_output + "\n")
         else:
+            # Print visible outputs even if errors occur
+            visible_outputs = semantics.get_visible_outputs()
+            if visible_outputs:
+                wrapped_output = "\n".join(map(str, visible_outputs))
+                self.console.insert(tk.END, wrapped_output + "\n")
+
             # Populate the symbol table TreeView
             for identifier, value in semantics.symbol_table.items():
                 if identifier == "IT" and not value:  # Skip IT if it is empty
                     continue
                 self.symbol_table.insert("", "end", values=(identifier, value))
 
-            # Collect and display all outputs from VISIBLE statements
-            visible_outputs = semantics.get_visible_outputs() 
-            # Convert all outputs to strings before joining
-            wrapped_output = "\n".join(map(str, visible_outputs))
+            # Display errors after visible outputs
             errors = "\n".join(semantics.report_errors())
-            self.console.delete(1.0, tk.END)
             self.console.insert(tk.END, f"Semantic Analysis Errors:\n{errors}\n")
 
     def get_user_input(self, variable_name):
